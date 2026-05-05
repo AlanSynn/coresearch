@@ -1,0 +1,7 @@
+# Runtime and local scratch artifacts; not part of the installable research skill bundle.
+.omx/
+tmp/
+.DS_Store
+**/.DS_Store
+__pycache__/
+*.pyc

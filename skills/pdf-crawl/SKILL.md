@@ -1,0 +1,64 @@
+---
+name: pdf-crawl
+description: Batch-download open-access PDFs for papers listed in a markdown research roadmap or paper list. Use when the user asks to fetch PDFs, crawl PDFs from a markdown file, or download open-access papers from a verified list. Runs the bundled crawler script when appropriate and avoids paywall-circumvention fallbacks by default.
+---
+
+# PDF Crawl
+
+Download open-access PDFs for papers listed in a Markdown table. This is an optional utility skill, not a core paper-writing workflow.
+
+## Supported input
+
+A Markdown file with paper rows. The bundled crawler works best with tables containing Korean headers:
+
+```markdown
+| # | 제목 | 저자 | 저널/학회 | 비고 |
+|---|---|---|---|---|
+```
+
+It extracts title, authors, venue/journal, and year from `비고`.
+
+## Workflow
+
+1. Confirm the Markdown path if ambiguous.
+2. For lists larger than 30 papers, the script refuses real downloads until a dry run has been reviewed and `--yes-large` is supplied.
+3. Use verified open-access sources by default: arXiv, eLife, bioRxiv, and Semantic Scholar `openAccessPdf`.
+4. Treat fuzzy DOI matches as not downloadable by default.
+5. Save PDFs into `pdf/` next to the Markdown file.
+6. Report downloaded, skipped, fuzzy, and not-found papers.
+
+## Invocation
+
+```bash
+python3 skills/pdf-crawl/crawler.py "<path-to-roadmap.md>" --dry-run
+python3 skills/pdf-crawl/crawler.py "<path-to-roadmap.md>"
+python3 skills/pdf-crawl/crawler.py "<path-to-roadmap.md>" --yes-large
+```
+
+Publisher landing-page `citation_pdf_url` lookup is opt-in only:
+
+```bash
+python3 skills/pdf-crawl/crawler.py "<path-to-roadmap.md>" --allow-publisher-pdf
+```
+
+If this repository path is not current, resolve the script relative to this skill folder.
+
+## Output summary
+
+```markdown
+# PDF Crawl Result
+- Input:
+- Output folder:
+- Downloaded:
+- Already existed:
+- Fuzzy matches requiring verification:
+- Not found / manual access needed:
+- Command run:
+```
+
+## Guardrails
+
+- Do not bypass paywalls.
+- Prefer arXiv, bioRxiv, eLife, Semantic Scholar `openAccessPdf`, or institutional/manual access notes.
+- Use `--allow-publisher-pdf` only when publisher landing-page PDF extraction is appropriate for the user's access context.
+- Treat fuzzy DOI matches as candidates, not verified papers; the script does not download DOI-derived PDFs from fuzzy matches by default.

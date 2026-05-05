@@ -1,0 +1,30 @@
+{
+  "name": "research-agent-skills",
+  "version": "1.0.0",
+  "description": "Lean Codex research-agent prompt and complete skills for paper design, rewriting, review, surveys, rebuttals, claim checking, reproducible engineering, figures, and slides.",
+  "author": {
+    "name": "Alan Synn"
+  },
+  "license": "MIT",
+  "keywords": [
+    "research",
+    "papers",
+    "academic-writing",
+    "review",
+    "reproducibility"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Research Agent Skills",
+    "shortDescription": "Research paper planning, writing, review, and reproducibility skills.",
+    "longDescription": "A lean, cumulative Codex research-agent bundle for Graphics, AI/ML/CV, and HCI papers. It avoids forced agent chat folders and provides complete skill workflows for paper design, review, rewriting, related work, rebuttals, claim checking, research engineering, figures, and slides.",
+    "developerName": "Alan Synn",
+    "category": "Productivity",
+    "capabilities": ["Interactive", "Write"],
+    "defaultPrompt": [
+      "Design this paper for CHI reviewers.",
+      "Review this draft for NeurIPS readiness.",
+      "Rewrite this abstract with calibrated claims."
+    ]
+  }
+}

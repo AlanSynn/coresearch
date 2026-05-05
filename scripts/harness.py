@@ -1,0 +1,561 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import difflib
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+SKILLS = [
+    "claim-check",
+    "paper-design",
+    "paper-figures",
+    "paper-proofread",
+    "paper-review",
+    "paper-rewrite",
+    "paper-survey",
+    "pdf-crawl",
+    "rebuttal-plan",
+    "research-engineer",
+    "research-guidelines",
+    "research-loop",
+    "research-slides",
+]
+
+START = "<!-- RESEARCH_AGENT_SKILLS:START -->"
+END = "<!-- RESEARCH_AGENT_SKILLS:END -->"
+OMX_SIGNATURE = "# oh-my-codex - Intelligent Multi-Agent Orchestration"
+OMX_RUNTIME_MARKER = "<!-- OMX:RUNTIME:START -->"
+
+
+def codex_home(value: str | None = None) -> Path:
+    return Path(value or os.environ.get("CODEX_HOME") or Path.home() / ".codex").expanduser().resolve()
+
+
+def default_bin_dir() -> Path:
+    return Path(os.environ.get("RESEARCH_HARNESS_BIN_DIR") or Path.home() / ".local" / "bin").expanduser().resolve()
+
+
+def bridge_block() -> str:
+    return f"""{START}
+Research Agent Skills are installed. For academic research tasks, load `research-guidelines` plus the smallest matching skill: `paper-design`, `paper-rewrite`, `paper-review`, `paper-survey`, `claim-check`, `rebuttal-plan`, `paper-figures`, `paper-proofread`, `research-engineer`, `research-loop`, `research-slides`, or `pdf-crawl`.
+Keep research work cumulative in the current thread. Do not create `.agents/` chats or paper-state forests. Use `.omx/` only for explicit OMX workflows, hooks, recovery, or checkpointing. Verify current venue rules and citations from official/primary sources when exactness matters.
+{END}
+"""
+
+
+def upsert_bridge_text(text: str) -> str:
+    block = bridge_block().strip()
+    if START in text and END in text:
+        before, rest = text.split(START, 1)
+        _old, after = rest.split(END, 1)
+        return (before.rstrip() + "\n\n" + block + "\n" + after.lstrip()).rstrip() + "\n"
+    if text.strip():
+        return text.rstrip() + "\n\n" + block + "\n"
+    return block + "\n"
+
+
+def remove_bridge_text(text: str) -> str:
+    if START not in text or END not in text:
+        return text
+    before, rest = text.split(START, 1)
+    _old, after = rest.split(END, 1)
+    return (before.rstrip() + "\n\n" + after.lstrip()).rstrip() + "\n"
+
+
+def project_agents_candidate(target: Path, mode: str, replace: bool) -> str:
+    path = target / "AGENTS.md"
+    current = path.read_text() if path.exists() else ""
+    if mode == "bridge":
+        return upsert_bridge_text(current)
+    if mode == "full":
+        if path.exists() and not replace:
+            # Candidate is still full replacement for diff display, but apply refuses.
+            pass
+        return (ROOT / "AGENTS.md").read_text()
+    raise ValueError(mode)
+
+
+def unified_diff(old: str, new: str, fromfile: str, tofile: str) -> str:
+    return "".join(difflib.unified_diff(old.splitlines(True), new.splitlines(True), fromfile=fromfile, tofile=tofile))
+
+
+def backup_file(path: Path) -> Path | None:
+    if not path.exists():
+        return None
+    idx = 1
+    while True:
+        candidate = path.with_name(f"{path.name}.bak.{idx}")
+        if not candidate.exists():
+            shutil.copy2(path, candidate)
+            return candidate
+        idx += 1
+
+
+def latest_backup(path: Path) -> Path | None:
+    candidates = sorted(path.parent.glob(f"{path.name}.bak.*"), key=lambda p: p.stat().st_mtime if p.exists() else 0)
+    return candidates[-1] if candidates else None
+
+
+def path_has_dir(directory: Path) -> bool:
+    paths = os.environ.get("PATH", "").split(os.pathsep)
+    return str(directory) in paths
+
+
+def is_repo_launcher(path: Path) -> bool:
+    if not path.exists() and not path.is_symlink():
+        return False
+    try:
+        return path.resolve(strict=False) in {(ROOT / "harness").resolve(), (ROOT / "bin" / "harness").resolve(), (ROOT / "scripts" / "harness.py").resolve()}
+    except OSError:
+        return False
+
+
+def run(cmd: list[str], *, cwd: Path | None = None) -> int:
+    print("$ " + " ".join(cmd))
+    return subprocess.call(cmd, cwd=str(cwd) if cwd else None)
+
+
+def cmd_install(args: argparse.Namespace) -> int:
+    script = ROOT / "scripts" / "install.sh"
+    cmd = [str(script), "--scope", args.scope, "--mode", args.mode]
+    if args.codex_home:
+        cmd += ["--codex-home", str(codex_home(args.codex_home))]
+    if args.project_dir:
+        cmd += ["--project-dir", str(Path(args.project_dir).expanduser().resolve())]
+    if args.global_bridge:
+        cmd.append("--global-bridge")
+    if args.project_bridge:
+        cmd.append("--project-bridge")
+    if args.force:
+        cmd.append("--force")
+    return subprocess.call(cmd)
+
+
+def cmd_link(args: argparse.Namespace) -> int:
+    args.scope = "user"
+    args.mode = "symlink"
+    args.force = True
+    return cmd_install(args)
+
+
+def cmd_self_install(args: argparse.Namespace) -> int:
+    bin_dir = Path(args.bin_dir).expanduser().resolve() if args.bin_dir else default_bin_dir()
+    dst = bin_dir / args.name
+    src = (ROOT / "scripts" / "harness.py").resolve()
+    bin_dir.mkdir(parents=True, exist_ok=True)
+
+    if dst.exists() or dst.is_symlink():
+        if is_repo_launcher(dst):
+            print(f"Already installed: {dst} -> {dst.resolve(strict=False)}")
+        elif args.force:
+            backup = backup_file(dst) if dst.exists() and not dst.is_symlink() else None
+            if dst.is_dir() and not dst.is_symlink():
+                print(f"Refusing to replace directory: {dst}", file=sys.stderr)
+                return 3
+            dst.unlink()
+            dst.symlink_to(src)
+            print(f"Installed: {dst} -> {src}")
+            if backup:
+                print(f"Backup: {backup}")
+        else:
+            print(f"Refusing to replace existing command: {dst}", file=sys.stderr)
+            print("Use --force only if you intentionally want to replace it.", file=sys.stderr)
+            return 3
+    else:
+        dst.symlink_to(src)
+        print(f"Installed: {dst} -> {src}")
+
+    if not path_has_dir(bin_dir):
+        print(f"WARN: {bin_dir} is not on PATH. Add it to your shell profile to run `{args.name}` globally.")
+    else:
+        print(f"OK: {bin_dir} is on PATH")
+    return 0
+
+
+def cmd_self_uninstall(args: argparse.Namespace) -> int:
+    bin_dir = Path(args.bin_dir).expanduser().resolve() if args.bin_dir else default_bin_dir()
+    dst = bin_dir / args.name
+    if not dst.exists() and not dst.is_symlink():
+        print(f"Not installed: {dst}")
+        return 0
+    if not is_repo_launcher(dst) and not args.force:
+        print(f"Refusing to remove non-research-harness command: {dst}", file=sys.stderr)
+        print("Use --force if you intentionally want to remove it.", file=sys.stderr)
+        return 3
+    dst.unlink()
+    print(f"Removed: {dst}")
+    return 0
+
+
+def cmd_init(args: argparse.Namespace) -> int:
+    target = Path(args.target).expanduser().resolve()
+    if not target.exists():
+        if args.apply:
+            target.mkdir(parents=True)
+        else:
+            print(f"Target does not exist: {target}")
+            print("Re-run with --apply to create it.")
+            return 2
+    path = target / "AGENTS.md"
+    old = path.read_text() if path.exists() else ""
+    new = project_agents_candidate(target, args.mode, args.replace)
+    diff = unified_diff(old, new, str(path) + " (current)", str(path) + f" ({args.mode})")
+
+    print(f"Target: {target}")
+    print(f"Mode: {args.mode}")
+    print(f"AGENTS.md: {'exists' if path.exists() else 'absent'}")
+    if args.mode == "full" and path.exists() and not args.replace:
+        print("Refusing to replace existing AGENTS.md without --replace.")
+        if diff:
+            print("\n--- Diff preview ---")
+            print(diff, end="")
+        return 3 if args.apply else 0
+
+    if diff:
+        print("\n--- Diff preview ---")
+        print(diff, end="")
+    else:
+        print("No AGENTS.md changes needed.")
+
+    if not args.apply:
+        print("\nDry run only. Re-run with --apply to write changes.")
+        return 0
+
+    backup = backup_file(path)
+    path.write_text(new)
+    print(f"\nWrote: {path}")
+    if backup:
+        print(f"Backup: {backup}")
+    return 0
+
+
+def cmd_global(args: argparse.Namespace) -> int:
+    home = codex_home(args.codex_home)
+    path = home / "AGENTS.md"
+    old = path.read_text() if path.exists() else ""
+    new = remove_bridge_text(old) if args.remove else upsert_bridge_text(old)
+    label = "remove-bridge" if args.remove else "bridge"
+    diff = unified_diff(old, new, str(path) + " (current)", str(path) + f" ({label})")
+    print(f"Global AGENTS: {path}")
+    print(f"Mode: {label}")
+    if diff:
+        print("\n--- Diff preview ---")
+        print(diff, end="")
+    else:
+        print("No global AGENTS.md changes needed.")
+    if not args.apply:
+        print("\nDry run only. Re-run with --apply to write changes.")
+        return 0
+    home.mkdir(parents=True, exist_ok=True)
+    backup = backup_file(path)
+    path.write_text(new)
+    print(f"\nWrote: {path}")
+    if backup:
+        print(f"Backup: {backup}")
+    return 0
+
+
+def cmd_rollback(args: argparse.Namespace) -> int:
+    if args.scope == "global":
+        path = codex_home(args.codex_home) / "AGENTS.md"
+    else:
+        path = Path(args.target).expanduser().resolve() / "AGENTS.md"
+    backup = Path(args.backup).expanduser().resolve() if args.backup else latest_backup(path)
+    if backup is None or not backup.exists():
+        print(f"No backup found for {path}", file=sys.stderr)
+        return 2
+    old = path.read_text() if path.exists() else ""
+    new = backup.read_text()
+    diff = unified_diff(old, new, str(path) + " (current)", str(backup) + " (restore)")
+    print(f"Rollback target: {path}")
+    print(f"Backup: {backup}")
+    if diff:
+        print("\n--- Diff preview ---")
+        print(diff, end="")
+    else:
+        print("No changes needed; current file already equals backup.")
+    if not args.apply:
+        print("\nDry run only. Re-run with --apply to restore backup.")
+        return 0
+    pre_restore = backup_file(path)
+    path.write_text(new)
+    print(f"\nRestored: {path}")
+    if pre_restore:
+        print(f"Pre-restore backup: {pre_restore}")
+    return 0
+
+
+def skill_status(home: Path) -> list[str]:
+    rows: list[str] = []
+    for name in SKILLS:
+        dst = home / "skills" / name
+        src = ROOT / "skills" / name
+        if dst.is_symlink():
+            try:
+                target = dst.resolve(strict=False)
+            except OSError:
+                target = Path(os.readlink(dst))
+            ok = "OK" if target == src else "OTHER"
+            rows.append(f"{name}: symlink:{ok} -> {target}")
+        elif dst.exists():
+            rows.append(f"{name}: copy/dir -> {dst}")
+        else:
+            rows.append(f"{name}: missing")
+    return rows
+
+
+def global_agents_status(home: Path) -> list[str]:
+    path = home / "AGENTS.md"
+    rows = [f"global AGENTS: {path}"]
+    if not path.exists():
+        rows.append("  missing")
+        return rows
+    text = path.read_text(errors="replace")
+    is_omx = OMX_SIGNATURE in text and OMX_RUNTIME_MARKER in text
+    rows.append(f"  omx-signature: {'yes' if is_omx else 'no'}")
+    template = ROOT / "tmp" / "oh-my-codex" / "templates" / "AGENTS.md"
+    if template.exists():
+        tpl = template.read_text()
+        exact = text == tpl
+        normalized = text.rstrip("\n") == tpl.rstrip("\n")
+        if exact:
+            rows.append("  exact-local-template-match: yes")
+        elif normalized:
+            rows.append("  exact-local-template-match: yes (trailing-newline-only)")
+        else:
+            rows.append("  exact-local-template-match: no")
+    rows.append(f"  research-bridge: {'yes' if START in text and END in text else 'no'}")
+    return rows
+
+
+def cmd_status(args: argparse.Namespace) -> int:
+    home = codex_home(args.codex_home)
+    target = Path(args.target).expanduser().resolve()
+    print(f"Repo: {ROOT}")
+    print(f"CODEX_HOME: {home}")
+    print(f"Project target: {target}")
+    print()
+    for row in global_agents_status(home):
+        print(row)
+    print()
+    project_agents = target / "AGENTS.md"
+    if project_agents.exists():
+        text = project_agents.read_text(errors="replace")
+        print(f"project AGENTS: {project_agents}")
+        print(f"  research-bridge: {'yes' if START in text and END in text else 'no'}")
+        print(f"  full-research-agents: {'yes' if 'OMX Research Agent System' in text else 'no'}")
+    else:
+        print(f"project AGENTS: missing ({project_agents})")
+    print()
+    print("Installed research skills:")
+    for row in skill_status(home):
+        print("  " + row)
+    return 0
+
+
+def cmd_doctor(args: argparse.Namespace) -> int:
+    home = codex_home(args.codex_home)
+    target = Path(args.target).expanduser().resolve()
+    failures: list[str] = []
+    warnings: list[str] = []
+
+    print("# Research Harness Doctor")
+    print(f"Repo: {ROOT}")
+    print(f"CODEX_HOME: {home}")
+    print(f"Project target: {target}")
+    print()
+
+    global_path = home / "AGENTS.md"
+    if not global_path.exists():
+        warnings.append("global AGENTS.md missing")
+    else:
+        text = global_path.read_text(errors="replace")
+        if OMX_SIGNATURE in text and OMX_RUNTIME_MARKER in text:
+            print("PASS global AGENTS has OMX signature")
+        else:
+            failures.append("global AGENTS does not look like OMX default")
+        if START in text and END in text:
+            print("INFO global research bridge installed")
+        else:
+            print("INFO global research bridge not installed")
+
+    for row in skill_status(home):
+        if "symlink:OK" in row:
+            print("PASS " + row)
+        elif "missing" in row:
+            failures.append("missing skill: " + row)
+        else:
+            warnings.append("non-symlink or external skill: " + row)
+
+    command_path = shutil.which(args.command_name)
+    if command_path:
+        resolved = Path(command_path).resolve(strict=False)
+        if resolved in {(ROOT / "harness").resolve(), (ROOT / "bin" / "harness").resolve(), (ROOT / "scripts" / "harness.py").resolve()}:
+            print(f"PASS command `{args.command_name}` resolves to this repo: {command_path}")
+        else:
+            warnings.append(f"command `{args.command_name}` resolves elsewhere: {command_path}")
+    else:
+        warnings.append(f"command `{args.command_name}` not found on PATH")
+
+    if shutil.which("omx"):
+        proc = subprocess.run(["omx", "--version"], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        if proc.returncode == 0:
+            print("PASS omx available: " + proc.stdout.splitlines()[0])
+        else:
+            warnings.append("omx exists but `omx --version` failed")
+    else:
+        warnings.append("omx not found on PATH")
+
+    project_agents = target / "AGENTS.md"
+    if project_agents.exists():
+        text = project_agents.read_text(errors="replace")
+        if START in text and END in text:
+            print("PASS project AGENTS has research bridge")
+        elif "OMX Research Agent System" in text:
+            print("PASS project AGENTS is full research prompt")
+        else:
+            print("INFO project AGENTS exists without research bridge/full prompt")
+    else:
+        print("INFO project AGENTS missing")
+
+    if args.validate:
+        code = subprocess.call([str(ROOT / "scripts" / "validate.sh")])
+        if code != 0:
+            failures.append(f"validate.sh failed with exit code {code}")
+
+    print()
+    for warning in warnings:
+        print("WARN " + warning)
+    for failure in failures:
+        print("FAIL " + failure)
+    if failures:
+        print(f"Doctor result: FAIL ({len(failures)} failure(s), {len(warnings)} warning(s))")
+        return 1 if args.strict else 0
+    print(f"Doctor result: PASS ({len(warnings)} warning(s))")
+    return 0
+
+
+def cmd_update(args: argparse.Namespace) -> int:
+    if args.pull:
+        code = run(["git", "pull", "--ff-only"], cwd=ROOT)
+        if code != 0:
+            return code
+    if not args.no_link:
+        link_args = argparse.Namespace(
+            codex_home=args.codex_home,
+            global_bridge=args.global_bridge,
+            project_bridge=False,
+            project_dir=None,
+            scope="user",
+            mode="symlink",
+            force=True,
+        )
+        code = cmd_link(link_args)
+        if code != 0:
+            return code
+    if not args.no_validate:
+        code = subprocess.call([str(ROOT / "scripts" / "validate.sh")])
+        if code != 0:
+            return code
+    print("Update complete.")
+    return 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+    p = argparse.ArgumentParser(prog="harness", description="Research Agent Skills install/init/status harness")
+    sub = p.add_subparsers(dest="cmd", required=True)
+
+    install = sub.add_parser("install", help="Install skills via scripts/install.sh")
+    install.add_argument("--scope", choices=["user", "project"], default="user")
+    install.add_argument("--mode", choices=["copy", "symlink"], default="copy")
+    install.add_argument("--codex-home")
+    install.add_argument("--project-dir")
+    install.add_argument("--global-bridge", action="store_true")
+    install.add_argument("--project-bridge", action="store_true")
+    install.add_argument("--force", action="store_true")
+    install.set_defaults(func=cmd_install)
+
+    link = sub.add_parser("link", help="Symlink user-scope skills so repo edits reflect locally")
+    link.add_argument("--codex-home")
+    link.add_argument("--global-bridge", action="store_true")
+    link.add_argument("--project-bridge", action="store_true")
+    link.add_argument("--project-dir")
+    link.set_defaults(func=cmd_link)
+
+    self_install = sub.add_parser("self-install", help="Install the `harness` command into a bin directory")
+    self_install.add_argument("--bin-dir")
+    self_install.add_argument("--name", default="harness")
+    self_install.add_argument("--force", action="store_true")
+    self_install.set_defaults(func=cmd_self_install)
+
+    self_uninstall = sub.add_parser("self-uninstall", help="Remove an installed harness command symlink")
+    self_uninstall.add_argument("--bin-dir")
+    self_uninstall.add_argument("--name", default="harness")
+    self_uninstall.add_argument("--force", action="store_true")
+    self_uninstall.set_defaults(func=cmd_self_uninstall)
+
+    init = sub.add_parser("init", help="Preview/apply project AGENTS.md setup")
+    init.add_argument("--target", default=".")
+    init.add_argument("--mode", choices=["bridge", "full"], default="bridge", help="bridge appends small block; full copies this repo's AGENTS.md")
+    init.add_argument("--apply", action="store_true", help="write changes; default is dry-run diff")
+    init.add_argument("--replace", action="store_true", help="allow full mode to replace existing AGENTS.md")
+    init.set_defaults(func=cmd_init)
+
+    diff = sub.add_parser("diff", help="Alias for init/global dry-run diff")
+    diff.add_argument("--target", default=".")
+    diff.add_argument("--mode", choices=["bridge", "full"], default="bridge")
+    diff.add_argument("--replace", action="store_true")
+    diff.add_argument("--global", dest="global_", action="store_true", help="show global AGENTS bridge diff instead of project diff")
+    diff.add_argument("--codex-home")
+    diff.set_defaults(func=lambda a: cmd_global(argparse.Namespace(codex_home=a.codex_home, remove=False, apply=False)) if a.global_ else cmd_init(a), apply=False)
+
+    global_cmd = sub.add_parser("global", help="Preview/apply/remove the global research bridge")
+    global_cmd.add_argument("--codex-home")
+    global_cmd.add_argument("--remove", action="store_true")
+    global_cmd.add_argument("--apply", action="store_true")
+    global_cmd.set_defaults(func=cmd_global)
+
+    rollback = sub.add_parser("rollback", help="Preview/apply rollback from latest AGENTS.md backup")
+    rollback.add_argument("--scope", choices=["project", "global"], default="project")
+    rollback.add_argument("--target", default=".")
+    rollback.add_argument("--codex-home")
+    rollback.add_argument("--backup")
+    rollback.add_argument("--apply", action="store_true")
+    rollback.set_defaults(func=cmd_rollback)
+
+    status = sub.add_parser("status", help="Show global/project/skill install status")
+    status.add_argument("--codex-home")
+    status.add_argument("--target", default=".")
+    status.set_defaults(func=cmd_status)
+
+    doctor = sub.add_parser("doctor", help="Run install/runtime checks")
+    doctor.add_argument("--codex-home")
+    doctor.add_argument("--target", default=".")
+    doctor.add_argument("--command-name", default="harness")
+    doctor.add_argument("--strict", action="store_true", help="return nonzero on failures")
+    doctor.add_argument("--validate", action="store_true", help="also run scripts/validate.sh")
+    doctor.set_defaults(func=cmd_doctor)
+
+    update = sub.add_parser("update", help="Optionally pull, relink user skills, and validate")
+    update.add_argument("--pull", action="store_true", help="run git pull --ff-only before relinking")
+    update.add_argument("--codex-home")
+    update.add_argument("--global-bridge", action="store_true")
+    update.add_argument("--no-link", action="store_true")
+    update.add_argument("--no-validate", action="store_true")
+    update.set_defaults(func=cmd_update)
+    return p
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    return int(args.func(args) or 0)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

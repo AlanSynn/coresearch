@@ -5,7 +5,7 @@ description: Rebuttal and response-planning workflow for research paper reviews.
 
 # Rebuttal Plan
 
-Turn reviews into a score-moving response strategy. Prioritize factual corrections, misunderstandings, and feasible evidence additions. Do not promise new experiments or claims unless the user confirms they can be done.
+Turn reviews into a score-moving response strategy. Prioritize factual corrections, misunderstandings, and feasible evidence additions. Do not promise new experiments or claims unless the user confirms they can be done. In OMX workflows, keep this as a planning/handoff artifact; do not implement new experiments unless execution mode is explicitly selected.
 
 ## Inputs
 

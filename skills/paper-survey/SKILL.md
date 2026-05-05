@@ -9,7 +9,7 @@ Find, verify, classify, and synthesize real papers. Default output is an in-chat
 
 ## Search policy
 
-When current or exact literature matters and web/search tools are available, search and prefer primary sources:
+Use the OMX `researcher` posture when available: official/proceedings/source-backed references first, version/date awareness, and links in the final answer. When current or exact literature matters and web/search tools are available, search and prefer primary sources:
 
 1. paper PDFs, publisher pages, arXiv/OpenReview/ACM/IEEE/official proceedings;
 2. DBLP, Semantic Scholar, OpenReview, Google Scholar snippets when accessible;

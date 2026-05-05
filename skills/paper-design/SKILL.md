@@ -20,6 +20,8 @@ Ask at most one clarifying question if the target venue or central artifact is i
 
 ## Workflow
 
+Use this skill in chat by default. If the user needs an executable implementation plan, hand off to `$ralplan`; if they need autonomous experiment steering, hand off to `research-loop` / `$autoresearch` after the design contract is clear.
+
 1. **Select venue mode.** Graphics, AI/ML/CV, or HCI/UIST/CHI.
 2. **Identify the actual contribution.** Distinguish artifact, method, study, dataset, benchmark, analysis, or theory.
 3. **Draft the central claim.** One sentence, scoped to evidence.

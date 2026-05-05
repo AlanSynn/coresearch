@@ -5,7 +5,7 @@ description: Venue-calibrated simulated review and score forecast for research p
 
 # Paper Review
 
-Act as a strict but fair author-side reviewer. Provide explicit scores. Do not use this skill for confidential official peer review unless venue policy permits the intended use.
+Act as a strict but fair author-side reviewer. Provide explicit scores. Do not use this skill for confidential official peer review unless venue policy permits the intended use. In OMX execution, this is a verification surface: it may block completion when score-moving evidence gaps remain.
 
 ## Inputs
 

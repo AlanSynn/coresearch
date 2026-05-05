@@ -5,7 +5,7 @@ description: Research figure planning and caption architecture. Use when the use
 
 # Paper Figures
 
-Design figures as evidence, not decoration. Every figure should support at least one claim and answer a likely reviewer question.
+Design figures as evidence, not decoration. Every figure should support at least one claim and answer a likely reviewer question. If actual figure generation is requested, hand off to an appropriate plotting/image skill or repository-native implementation after the figure plan is approved.
 
 ## Workflow
 

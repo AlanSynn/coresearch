@@ -1,30 +1,38 @@
 {
   "name": "research-agent-skills",
   "version": "1.0.0",
-  "description": "Lean Codex research-agent prompt and complete skills for paper design, rewriting, review, surveys, rebuttals, claim checking, reproducible engineering, figures, and slides.",
+  "description": "Lean OMX-compatible research-agent prompt and complete skills for cumulative paper design, review, surveys, rebuttals, autonomous research loops, claim checking, reproducible engineering, figures, and slides.",
   "author": {
     "name": "Alan Synn"
   },
   "license": "MIT",
   "keywords": [
-    "research",
-    "papers",
     "academic-writing",
+    "autoresearch",
+    "claims",
+    "experiments",
+    "omx",
+    "papers",
+    "reproducibility",
+    "research",
     "review",
-    "reproducibility"
+    "venue-fit"
   ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Research Agent Skills",
-    "shortDescription": "Research paper planning, writing, review, and reproducibility skills.",
-    "longDescription": "A lean, cumulative Codex research-agent bundle for Graphics, AI/ML/CV, and HCI papers. It avoids forced agent chat folders and provides complete skill workflows for paper design, review, rewriting, related work, rebuttals, claim checking, research engineering, figures, and slides.",
+    "shortDescription": "OMX-compatible research planning, writing, review, and reproducibility skills.",
+    "longDescription": "A lean, cumulative Codex/OMX research-agent bundle for Graphics, AI/ML/CV, and HCI work. The root prompt stays small and routes into complete skills for paper design, review, rewriting, related work, rebuttals, autonomous research loops, claim checking, research engineering, figures, and slides. It avoids forced .agents chat folders and uses .omx state only for explicit OMX workflows.",
     "developerName": "Alan Synn",
     "category": "Productivity",
-    "capabilities": ["Interactive", "Write"],
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
     "defaultPrompt": [
       "Design this paper for CHI reviewers.",
       "Review this draft for NeurIPS readiness.",
-      "Rewrite this abstract with calibrated claims."
+      "Create an OMX autoresearch mission for this experiment idea."
     ]
   }
 }

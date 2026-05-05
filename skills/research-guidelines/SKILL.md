@@ -11,6 +11,7 @@ Use these rules for all research work, even when another skill is active.
 
 - Use the active conversation and user-supplied files as the default working state.
 - Do not create `.agents/`, separate chat folders, agent mailboxes, state files, or paper workspaces unless the user explicitly asks for file artifacts.
+- Use `.omx/` only for explicit OMX runtime workflows, recovery/checkpointing, compaction resilience, or user-requested artifacts; do not duplicate hook-owned state.
 - If a task benefits from files, ask only when file creation changes the user's workspace materially. Otherwise deliver in chat.
 
 ## 2. Separate fact, inference, and recommendation

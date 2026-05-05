@@ -10,6 +10,7 @@ Perform a final line-level pass. This skill is not a venue review and not a cont
 ## Default policy
 
 - Phase 1 is read-only: report issues without editing files.
+- In OMX/team contexts, proofreading is a final verifier pass; do not broaden into argument review unless the user asks.
 - Phase 2 edits only after user approval.
 - If the user pasted text and asks for direct correction, provide corrected text in chat.
 - Do not change technical meaning.

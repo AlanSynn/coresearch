@@ -5,7 +5,7 @@ description: Academic research presentation workflow. Use when the user asks for
 
 # Research Slides
 
-Create research talks that preserve the paper's evidence and contribution without overloading slides. Default output is a slide plan and slide text in chat. Generate `.tex`, `.pptx`, or files only when requested.
+Create research talks that preserve the paper's evidence and contribution without overloading slides. Default output is a slide plan and slide text in chat. Generate `.tex`, `.pptx`, or files only when requested. In OMX workflows, treat the deck as a derived artifact from verified paper claims, not a new source of claims.
 
 ## Inputs
 

@@ -13,7 +13,7 @@ Validate research text against supplied sources, code, data, logs, or web-verifi
 - Sources, PDFs, links, BibTeX, logs, figures, tables, or code when available.
 - Verification strictness and whether web search is allowed.
 
-If sources are missing, claims are externally checkable, and browsing/search tools are available, search when current or exact accuracy matters. Prefer primary sources.
+If sources are missing, claims are externally checkable, and browsing/search tools are available, search when current or exact accuracy matters. Prefer primary sources. In OMX workflows, treat this skill as a verifier surface: return PASS/FAIL/PARTIAL evidence, not just prose.
 
 ## Claim classes
 

@@ -16,9 +16,14 @@ pass() {
 python3 -m json.tool .codex-plugin/plugin.json >/dev/null
 pass "plugin manifest JSON parses"
 
-python3 -m py_compile skills/pdf-crawl/crawler.py
-python3 -m py_compile scripts/harness.py
-pass "python utilities compile"
+python3 - <<'PY'
+from pathlib import Path
+
+for rel in ("skills/pdf-crawl/crawler.py", "scripts/harness.py"):
+    text = Path(rel).read_text()
+    compile(text, rel, "exec")
+PY
+pass "python utilities compile without pycache"
 
 bash -n scripts/install.sh
 bash -n scripts/validate.sh
@@ -31,7 +36,26 @@ from pathlib import Path
 import json
 import re
 
-agents = Path('AGENTS.md').read_text()
+broken = []
+files_with_cr = []
+skip = {'.git', 'tmp', '.omx', '__pycache__'}
+for path in Path('.').rglob('*'):
+    parts = set(path.parts)
+    if parts & skip:
+        continue
+    if path.is_symlink() and not path.exists():
+        broken.append(str(path))
+    if path.is_file() and not path.is_symlink() and (path.suffix in {'.md', '.py', '.sh', '.json'} or path.name == 'harness'):
+        if b'\r' in path.read_bytes():
+            files_with_cr.append(str(path))
+assert not broken, broken
+assert not files_with_cr, files_with_cr
+
+readme = Path('README.md').read_text()
+assert 'positional target is planned' not in readme
+assert 'planned ergonomic alias' not in readme
+
+agents = Path('templates/research/AGENTS.md').read_text()
 required = [
     '<!-- OMX:RUNTIME:START -->',
     '<!-- OMX:RUNTIME:END -->',
@@ -43,6 +67,9 @@ for marker in required:
 assert 'PaperSmith' not in agents
 assert '/project_brief.md' not in agents
 assert 'Do not create separate `.agents/` chats' in agents
+root_agents = Path('AGENTS.md').read_text()
+assert 'Coresearch Bundle Development Guidelines' in root_agents
+assert 'OMX Research Agent System' not in root_agents
 
 manifest = json.loads(Path('.codex-plugin/plugin.json').read_text())
 assert manifest['skills'] == './skills/'
@@ -135,9 +162,9 @@ printf '# oh-my-codex - Intelligent Multi-Agent Orchestration\n<!-- OMX:RUNTIME:
 ./harness global --codex-home "$global_home" >/tmp/research-skills-harness-global-dry.txt
 grep -q 'Dry run only' /tmp/research-skills-harness-global-dry.txt || fail "harness global dry-run missing"
 ! grep -q 'RESEARCH_AGENT_SKILLS:START' "$global_home/AGENTS.md" || fail "harness global dry-run wrote file"
-./harness global --codex-home "$global_home" --apply >/tmp/research-skills-harness-global-apply.txt
+./harness global --codex-home "$global_home" -y >/tmp/research-skills-harness-global-apply.txt
 grep -q 'RESEARCH_AGENT_SKILLS:START' "$global_home/AGENTS.md" || fail "harness global apply missing bridge"
-./harness global --codex-home "$global_home" --remove --apply >/tmp/research-skills-harness-global-remove.txt
+./harness global --codex-home "$global_home" --remove -y >/tmp/research-skills-harness-global-remove.txt
 ! grep -q 'RESEARCH_AGENT_SKILLS:START' "$global_home/AGENTS.md" || fail "harness global remove left bridge"
 pass "harness global bridge dry/apply/remove"
 
@@ -148,6 +175,26 @@ printf '# oh-my-codex - Intelligent Multi-Agent Orchestration\n<!-- OMX:RUNTIME:
 grep -q 'Doctor result: PASS' /tmp/research-skills-harness-doctor.txt || fail "harness doctor did not pass"
 pass "harness doctor strict"
 
+broken_home="$(mktemp -d)"
+printf '# oh-my-codex - Intelligent Multi-Agent Orchestration\n<!-- OMX:RUNTIME:START -->\n<!-- OMX:RUNTIME:END -->\n' > "$broken_home/AGENTS.md"
+./harness link --codex-home "$broken_home" >/tmp/research-skills-harness-broken-link-setup.txt
+rm -f "$broken_home/skills/research-loop"
+ln -s "$broken_home/does-not-exist" "$broken_home/skills/research-loop"
+if ./harness doctor --codex-home "$broken_home" --target . --strict >/tmp/research-skills-harness-broken-link-doctor.txt 2>&1; then
+  fail "harness doctor passed with a broken skill symlink"
+fi
+grep -q 'bad skill install: research-loop: symlink:BROKEN' /tmp/research-skills-harness-broken-link-doctor.txt || fail "harness doctor did not report broken research-loop symlink"
+pass "harness doctor rejects broken skill symlinks"
+
+repair_home="$(mktemp -d)"
+repair_bin="$(mktemp -d)"
+printf '# oh-my-codex - Intelligent Multi-Agent Orchestration\n<!-- OMX:RUNTIME:START -->\n<!-- OMX:RUNTIME:END -->\n' > "$repair_home/AGENTS.md"
+./harness repair --codex-home "$repair_home" --bin-dir "$repair_bin" --target . --no-validate >/tmp/research-skills-harness-repair.txt
+[[ -L "$repair_home/skills/research-loop" ]] || fail "harness repair did not relink research-loop"
+[[ -L "$repair_bin/harness" ]] || fail "harness repair did not install harness command"
+grep -q 'Doctor result: PASS' /tmp/research-skills-harness-repair.txt || fail "harness repair did not run strict doctor"
+pass "harness repair relink/self-install/doctor"
+
 update_home="$(mktemp -d)"
 ./harness update --codex-home "$update_home" --no-validate >/tmp/research-skills-harness-update.txt
 [[ -L "$update_home/skills/research-loop" ]] || fail "harness update did not relink skills"
@@ -155,31 +202,48 @@ grep -q 'Update complete' /tmp/research-skills-harness-update.txt || fail "harne
 pass "harness update relink"
 
 harness_project="$(mktemp -d)"
-./harness init --target "$harness_project" --mode bridge >/tmp/research-skills-harness-init-dry.txt
+./harness init "$harness_project" --bridge >/tmp/research-skills-harness-init-dry.txt
 grep -q 'Dry run only' /tmp/research-skills-harness-init-dry.txt || fail "harness init dry-run did not report dry run"
 [[ ! -f "$harness_project/AGENTS.md" ]] || fail "harness init dry-run wrote AGENTS.md"
-./harness init --target "$harness_project" --mode bridge --apply >/tmp/research-skills-harness-init-apply.txt
+./harness init "$harness_project" --bridge -y >/tmp/research-skills-harness-init-apply.txt
 grep -q 'RESEARCH_AGENT_SKILLS:START' "$harness_project/AGENTS.md" || fail "harness init bridge apply missing bridge"
 ./harness init --target "$harness_project" --mode bridge --apply >/tmp/research-skills-harness-init-apply-2.txt
 count="$(grep -c 'RESEARCH_AGENT_SKILLS:START' "$harness_project/AGENTS.md")"
 [[ "$count" == "1" ]] || fail "harness bridge duplicated: $count"
-pass "harness init bridge dry/apply/idempotent"
+target_override_a="$(mktemp -d)"
+target_override_b="$(mktemp -d)"
+./harness init "$target_override_a" --target "$target_override_b" --bridge -y >/tmp/research-skills-harness-target-override.txt
+[[ ! -f "$target_override_a/AGENTS.md" ]] || fail "--target did not override positional target"
+grep -q 'RESEARCH_AGENT_SKILLS:START' "$target_override_b/AGENTS.md" || fail "--target override did not write chosen target"
+pass "harness init shorthand/target-override bridge dry/apply/idempotent"
+
+wizard_full="$(mktemp -d)"
+printf '%s\n2\n2\n' "$wizard_full" | ./harness init -i >/tmp/research-skills-harness-init-wizard.txt
+grep -q 'Interactive project setup' /tmp/research-skills-harness-init-wizard.txt || fail "harness init interactive wizard did not start"
+grep -q 'Selected mode: full' /tmp/research-skills-harness-init-wizard.txt || fail "harness init interactive wizard did not select full mode"
+cmp -s templates/research/AGENTS.md "$wizard_full/AGENTS.md" || fail "harness init interactive wizard did not write full template"
+pass "harness init interactive wizard full apply"
 
 rollback_project="$(mktemp -d)"
 printf 'ORIGINAL\n' > "$rollback_project/AGENTS.md"
-./harness init --target "$rollback_project" --mode bridge --apply >/tmp/research-skills-harness-rollback-setup.txt
-./harness rollback --scope project --target "$rollback_project" >/tmp/research-skills-harness-rollback-dry.txt
+./harness init "$rollback_project" --bridge -y >/tmp/research-skills-harness-rollback-setup.txt
+./harness rollback --scope project "$rollback_project" >/tmp/research-skills-harness-rollback-dry.txt
 grep -q 'Dry run only' /tmp/research-skills-harness-rollback-dry.txt || fail "harness rollback dry-run missing"
 grep -q 'RESEARCH_AGENT_SKILLS:START' "$rollback_project/AGENTS.md" || fail "rollback dry-run modified file"
-./harness rollback --scope project --target "$rollback_project" --apply >/tmp/research-skills-harness-rollback-apply.txt
+./harness rollback --scope project "$rollback_project" -y >/tmp/research-skills-harness-rollback-apply.txt
 grep -q '^ORIGINAL$' "$rollback_project/AGENTS.md" || fail "rollback did not restore original"
 ! grep -q 'RESEARCH_AGENT_SKILLS:START' "$rollback_project/AGENTS.md" || fail "rollback left bridge"
-pass "harness rollback dry/apply"
+pass "harness rollback positional dry/apply"
 
 harness_full="$(mktemp -d)"
-./harness init --target "$harness_full" --mode full --apply >/tmp/research-skills-harness-full.txt
-cmp -s AGENTS.md "$harness_full/AGENTS.md" || fail "harness full init did not copy full AGENTS"
-pass "harness init full copy"
+./harness init "$harness_full" --full -y >/tmp/research-skills-harness-full.txt
+cmp -s templates/research/AGENTS.md "$harness_full/AGENTS.md" || fail "harness full init did not copy research template"
+./harness diff "$harness_full" --full >/tmp/research-skills-harness-diff-full.txt
+grep -q 'No AGENTS.md changes needed' /tmp/research-skills-harness-diff-full.txt || fail "harness diff positional full did not work"
+legacy_full="$(mktemp -d)"
+./harness init "$legacy_full" --mode full --apply >/tmp/research-skills-harness-legacy-full.txt
+cmp -s templates/research/AGENTS.md "$legacy_full/AGENTS.md" || fail "legacy --mode full --apply did not copy research template"
+pass "harness init full shorthand and legacy template copy"
 
 project_dir="$(mktemp -d)"
 ./scripts/install.sh --scope project --project-dir "$project_dir" --project-bridge --mode symlink >/tmp/research-skills-install-project.txt
@@ -190,7 +254,7 @@ pass "project install symlink mode and bridge"
 
 project_full="$(mktemp -d)"
 ./scripts/install.sh --scope project --project-dir "$project_full" --full-project-agents >/tmp/research-skills-install-full-project.txt
-cmp -s AGENTS.md "$project_full/AGENTS.md" || fail "full project AGENTS install differs"
+cmp -s templates/research/AGENTS.md "$project_full/AGENTS.md" || fail "full project AGENTS install differs"
 pass "full project AGENTS install when absent"
 
 if command -v omx >/dev/null 2>&1; then

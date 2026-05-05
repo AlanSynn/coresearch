@@ -40,7 +40,7 @@ Options:
   --mode copy|symlink        Copy skill folders or symlink them to this repo. Default: copy
   --global-bridge            Append/update a small bridge block in CODEX_HOME/AGENTS.md
   --project-bridge           Append/update a small bridge block in PROJECT_DIR/AGENTS.md
-  --full-project-agents      In project scope, install this repo's full AGENTS.md when none exists
+  --full-project-agents      In project scope, install templates/research/AGENTS.md when none exists
   --force                    Allow replacing existing generated/symlinked skill dirs
   -h, --help                 Show this help
 
@@ -165,8 +165,8 @@ if [[ "$FULL_PROJECT_AGENTS" -eq 1 ]]; then
   if [[ -f "$PROJECT_DIR/AGENTS.md" ]]; then
     echo "Project AGENTS.md already exists; not replacing. Use --project-bridge instead: $PROJECT_DIR/AGENTS.md" >&2
   else
-    cp "$ROOT_DIR/AGENTS.md" "$PROJECT_DIR/AGENTS.md"
-    echo "Installed full project AGENTS.md: $PROJECT_DIR/AGENTS.md"
+    cp "$ROOT_DIR/templates/research/AGENTS.md" "$PROJECT_DIR/AGENTS.md"
+    echo "Installed full research project AGENTS.md: $PROJECT_DIR/AGENTS.md"
   fi
 fi
 

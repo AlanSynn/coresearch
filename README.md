@@ -1,83 +1,258 @@
-# Research Agent Skills for OMX
+# Coresearch: Research Agent Skills for OMX
 
-Installable research prompt/skill bundle for Codex + oh-my-codex. The bundle keeps the global OMX prompt intact by installing skills and, optionally, adding a small marker-bounded bridge block to `AGENTS.md`.
+Coresearch is an installable research-agent bundle for Codex + oh-my-codex (OMX). It keeps the OMX global prompt intact, installs complete research skills, and can initialize individual research projects with a small bridge block or a full research `AGENTS.md` template.
+
+## What lives where
+
+| Path | Purpose | Installed where? |
+|---|---|---|
+| `AGENTS.md` | Development prompt for maintaining this Coresearch bundle | No |
+| `templates/research/AGENTS.md` | Full research-project prompt template | Copied by `harness init --full` |
+| `skills/*/SKILL.md` | Complete research skills | Symlinked/copied into `${CODEX_HOME:-~/.codex}/skills` or project `.codex/skills` |
+| `harness`, `bin/harness`, `scripts/harness.py` | CLI for install/init/status/diff/rollback/repair/update | `harness self-install` symlinks command into `~/.local/bin` |
+
+The root `AGENTS.md` is intentionally **not** the template installed into other projects. It is only for editing this bundle.
 
 ## Recommended install
 
-### 1. User-scope skills only
-
-Safe default. Does not edit global `AGENTS.md`.
+### 1. Link skills so repo edits auto-update local Codex skills
 
 ```bash
-./scripts/install.sh --scope user
+./harness link
 ```
 
-Then restart Codex/OMX and invoke skills explicitly:
+Equivalent:
+
+```bash
+./scripts/install.sh --scope user --mode symlink --force
+```
+
+This creates symlinks such as:
 
 ```text
-$paper-design
-$paper-review
-$research-loop
-$claim-check
+~/.codex/skills/paper-design  -> ./skills/paper-design
+~/.codex/skills/research-loop -> ./skills/research-loop
 ```
 
-### 2. User-scope with global bridge
+After this, edits in this repo's `skills/` directory are reflected in local Codex skill files. Restart Codex/OMX to refresh skill discovery metadata in an already-running session.
 
-Adds or updates a small `RESEARCH_AGENT_SKILLS` block in `${CODEX_HOME:-~/.codex}/AGENTS.md`, with a timestamped backup. It does not replace the OMX global prompt.
-
-```bash
-./scripts/install.sh --scope user --global-bridge
-```
-
-Use this when you want research-task routing to happen naturally from the global prompt.
-
-### 3. Project-scope install
-
-Keeps research behavior local to one repository or paper workspace.
+### 2. Install the `harness` command
 
 ```bash
-./scripts/install.sh --scope project --project-dir /path/to/research/repo --project-bridge
-cd /path/to/research/repo
-omx setup --scope project --plugin
-# or: CODEX_HOME=.codex omx
-```
-
-Use this when you do not want any global prompt changes.
-
-## Harness command
-
-Use the local harness CLI for status, symlink installs, command installation, project initialization, diffs, rollback, and update/relink workflows:
-
-```bash
-./harness status
-./harness doctor
-./harness link
 ./harness self-install
-harness status                         # after self-install, if ~/.local/bin is on PATH
-./harness global                       # dry-run global bridge diff
-./harness global --apply               # add/update small global bridge
-./harness global --remove --apply      # remove small global bridge
-./harness init --target /path/to/research/repo --mode bridge
-./harness init --target /path/to/research/repo --mode bridge --apply
-./harness init --target /path/to/research/repo --mode full --apply
-./harness diff --target /path/to/research/repo --mode full
-./harness diff --global
-./harness rollback --scope project --target /path/to/research/repo
-./harness rollback --scope project --target /path/to/research/repo --apply
-./harness update                       # relink user skills and run validation
-./harness update --pull                # git pull --ff-only, relink, validate
 ```
 
-Modes:
+Default install path:
 
-- `bridge`: add a small `RESEARCH_AGENT_SKILLS` block to the target `AGENTS.md`; safest for existing projects.
-- `full`: copy this repo's full `AGENTS.md` into the target; refuses to replace an existing file unless `--replace` is supplied.
+```text
+${RESEARCH_HARNESS_BIN_DIR:-~/.local/bin}/harness
+```
 
-`harness init`, `harness global`, `harness diff`, and `harness rollback` are dry-run by default and print unified diffs. Add `--apply` to write changes. Existing `AGENTS.md` files are backed up before writes.
+If `~/.local/bin` is on `PATH`, you can then run:
 
-`harness self-install` installs a symlink command at `${RESEARCH_HARNESS_BIN_DIR:-~/.local/bin}/harness`. Add that directory to `PATH` if the command is not found globally.
+```bash
+harness status
+harness doctor
+harness repair
+harness update
+```
 
-## Validate
+Remove the installed command:
+
+```bash
+harness self-uninstall
+```
+
+### 3. Keep global OMX prompt unchanged by default
+
+Your global prompt should remain the OMX default:
+
+```text
+~/.codex/AGENTS.md
+```
+
+Check:
+
+```bash
+harness status
+harness doctor --strict
+```
+
+If links or command shims drift, repair the local install without modifying the global prompt:
+
+```bash
+harness repair
+```
+
+If you want natural global routing into these research skills, add only the small bridge block:
+
+```bash
+harness global          # dry-run diff
+harness global --apply
+```
+
+Remove it later:
+
+```bash
+harness global --remove --apply
+```
+
+This does **not** replace the OMX global prompt; it only updates a marker-bounded block:
+
+```text
+<!-- RESEARCH_AGENT_SKILLS:START -->
+...
+<!-- RESEARCH_AGENT_SKILLS:END -->
+```
+
+## Project initialization
+
+### Interactive wizard
+
+For normal use, just run:
+
+```bash
+harness init
+```
+
+In an interactive terminal this opens a small built-in menu, similar to a dropdown:
+
+1. choose the target directory;
+2. choose `bridge` or `full`;
+3. choose dry-run preview or apply;
+4. choose whether to replace an existing `AGENTS.md` when using `full`.
+
+Force the same wizard even when passing a target:
+
+```bash
+harness init . --interactive
+harness init . -i
+```
+
+No extra Python packages are required. In non-interactive contexts, such as scripts or CI, use the explicit flags below.
+
+### Safe default: project bridge
+
+Use this for most research repos. It preserves any existing project `AGENTS.md` and adds a small research bridge block.
+
+```bash
+cd /path/to/research-repo
+harness init              # same as: harness init . --bridge
+harness init .            # explicit positional target
+harness init -y
+```
+
+Equivalent explicit form:
+
+```bash
+harness init /path/to/research-repo --bridge
+harness init /path/to/research-repo --bridge -y
+```
+
+### Full research prompt template
+
+Use this for a research-only repo where you want the full project prompt.
+
+```bash
+harness init /path/to/research-repo --full
+harness init /path/to/research-repo --full -y
+```
+
+This copies:
+
+```text
+templates/research/AGENTS.md -> /path/to/research-repo/AGENTS.md
+```
+
+If the target already has `AGENTS.md`, full mode refuses to replace it unless you explicitly pass `--replace`:
+
+```bash
+harness init /path/to/research-repo --full --replace -y
+```
+
+Long-form compatibility remains available:
+
+```bash
+harness init /path/to/research-repo --mode full --apply
+```
+
+### Diff before writing
+
+All prompt writes are dry-run by default:
+
+```bash
+harness diff /path/to/research-repo --bridge
+harness diff /path/to/research-repo --full
+harness diff --global
+```
+
+### Rollback
+
+Prompt writes create backups. Preview rollback:
+
+```bash
+harness rollback --scope project /path/to/research-repo
+```
+
+Apply rollback:
+
+```bash
+harness rollback --scope project /path/to/research-repo -y
+```
+
+Global rollback:
+
+```bash
+harness rollback --scope global
+harness rollback --scope global -y
+```
+
+## How AGENTS.md execution works under OMX
+
+When you run Codex/OMX in a project, instruction surfaces compose roughly like this:
+
+1. **Global OMX prompt**: `${CODEX_HOME:-~/.codex}/AGENTS.md`
+   - Should remain OMX default.
+2. **Project prompt**: nearest `AGENTS.md` in the current directory tree.
+   - Installed by `harness init --bridge` or `--full`.
+3. **Skills**: `${CODEX_HOME:-~/.codex}/skills/*/SKILL.md` or project `.codex/skills/*/SKILL.md`.
+   - Installed/linked by `harness link` or `harness install`.
+4. **OMX runtime overlay**: runtime/team state appended by OMX marker contracts.
+
+So the intended setup is:
+
+- global `AGENTS.md`: OMX default;
+- user skills: symlinked Coresearch skills;
+- target research repo `AGENTS.md`: bridge or full research template;
+- `.omx/`: only for explicit OMX runtime workflows.
+
+## Harness command reference
+
+```bash
+harness status                         # show global/project/skill state
+harness doctor --strict                # verify install health
+harness repair                         # relink skills, reinstall command, validate, strict doctor
+harness link                           # symlink user-scope skills to this repo
+harness install --scope user           # copy user-scope skills
+harness install --scope project --project-dir . --project-bridge
+harness self-install                   # install harness command into ~/.local/bin
+harness self-uninstall                 # remove installed harness command
+harness global                         # dry-run global bridge diff
+harness global -y                      # apply global bridge
+harness global --remove -y             # remove global bridge
+harness init                           # interactive wizard in a TTY; bridge dry-run in scripts
+harness init .                         # dry-run bridge install for explicit target
+harness init . --interactive           # force wizard for a target
+harness init . -y                      # apply bridge to current dir
+harness init . --full -y               # apply full research template
+harness diff . --full
+harness diff --global
+harness rollback --scope project . -y
+harness update                         # relink skills and validate
+harness update --pull                  # git pull --ff-only, relink, validate
+```
+
+## Validation
 
 Run the full local validation harness:
 
@@ -85,30 +260,32 @@ Run the full local validation harness:
 ./scripts/validate.sh
 ```
 
-It checks plugin JSON, skill frontmatter, OMX marker contracts, install script parsing, user/project install behavior, bridge idempotency, full project `AGENTS.md` install, and `pdf-crawl` dry-run safety.
+It checks:
 
-## Development install / auto-update from this repo
-
-Use symlinks so edits in this repo update the installed user-scope skills immediately:
-
-```bash
-./scripts/link-local.sh
-```
-
-If you also want the small global `AGENTS.md` bridge block:
-
-```bash
-./scripts/link-local.sh --global-bridge
-```
-
-Equivalent explicit form:
-
-```bash
-./scripts/install.sh --scope user --mode symlink --force
-```
+- plugin JSON parsing;
+- Python and shell script syntax without leaving `__pycache__`;
+- broken symlinks in this repo;
+- stray carriage-return characters in markdown, Python, shell, JSON, and wrapper files;
+- skill frontmatter and expected skill catalog;
+- OMX marker contracts in `templates/research/AGENTS.md`;
+- root `AGENTS.md` remains bundle-development guidance, not the installable research template;
+- `pdf-crawl` safety flags and dry-run behavior;
+- user copy install and bridge idempotency;
+- user symlink install for repo-auto-update;
+- `harness link/status`;
+- `harness self-install/self-uninstall`;
+- `harness global` dry/apply/remove;
+- `harness doctor --strict`;
+- `harness doctor` failure on broken skill symlinks;
+- `harness repair` relink/self-install/strict-doctor path;
+- `harness update` relink;
+- `harness init` interactive, positional/flag target, bridge/full/rollback behavior;
+- project install behavior;
+- OMX availability.
 
 ## Policy
 
-- Ordinary research work stays cumulative in the current conversation.
-- The bundle does not create `.agents/` chats or paper-state forests.
-- `.omx/` state is used only for explicit OMX workflows, hooks, recovery, or checkpointing.
+- Do not overwrite the global OMX prompt by default.
+- Do not create `.agents/` chats, mailboxes, or paper-state forests.
+- Use `.omx/` only for explicit OMX workflows, hooks, recovery, or checkpointing.
+- Prefer bridge mode for existing projects and full mode for research-only projects.

@@ -7,6 +7,8 @@ description: Batch-download open-access PDFs for papers listed in a markdown res
 
 Download open-access PDFs for papers listed in a Markdown table. This is an optional utility skill, not a core paper-writing workflow.
 
+`paper-survey` may emit a compatible roadmap table when a literature survey needs PDF-backed evidence. Preserve the crawler's output categories so `paper-survey` can distinguish `PDF VERIFIED`, metadata-only, fuzzy, and not-found papers instead of assuming paper content.
+
 ## Supported input
 
 A Markdown file with paper rows. The bundled crawler works best with tables containing Korean headers:
@@ -62,3 +64,5 @@ If this repository path is not current, resolve the script relative to this skil
 - Prefer arXiv, bioRxiv, eLife, Semantic Scholar `openAccessPdf`, or institutional/manual access notes.
 - Use `--allow-publisher-pdf` only when publisher landing-page PDF extraction is appropriate for the user's access context.
 - Treat fuzzy DOI matches as candidates, not verified papers; the script does not download DOI-derived PDFs from fuzzy matches by default.
+- A downloaded or already-existing PDF only proves local access; paper claims still require reading the PDF or official full text.
+- Not-found papers remain manual-follow-up items unless independently verified from primary metadata or official sources.

@@ -135,7 +135,7 @@ def add_mode_flags(parser: argparse.ArgumentParser) -> None:
 
 
 def add_apply_flag(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("-y", "--yes", "--apply", dest="apply", action="store_true", help="write changes; default is dry-run diff")
+    parser.add_argument("-y", "--yes", "--apply", dest="apply", action="store_true", help="write changes; explicit commands default to dry-run diff")
 
 
 def prompt_text(label: str, default: str) -> str:
@@ -185,7 +185,23 @@ def should_interactive_init(args: argparse.Namespace) -> bool:
     if getattr(args, "interactive", False):
         return True
     raw_argv = getattr(args, "_raw_argv", [])
-    return raw_argv == ["init"] and sys.stdin.isatty()
+    return raw_argv == ["init"]
+
+
+def explicit_init_mode(args: argparse.Namespace) -> str | None:
+    raw_argv = getattr(args, "_raw_argv", [])
+    for idx, token in enumerate(raw_argv):
+        if idx == 0:
+            continue
+        if token == "--bridge":
+            return "bridge"
+        if token == "--full":
+            return "full"
+        if token == "--mode" and idx + 1 < len(raw_argv):
+            return raw_argv[idx + 1]
+        if token.startswith("--mode="):
+            return token.split("=", 1)[1]
+    return None
 
 
 def apply_interactive_init(args: argparse.Namespace) -> None:
@@ -197,7 +213,7 @@ def apply_interactive_init(args: argparse.Namespace) -> None:
             ("bridge", "preserve AGENTS.md and add a small research bridge block"),
             ("full", "copy templates/research/AGENTS.md as the project AGENTS.md"),
         ],
-        getattr(args, "mode", None) or "bridge",
+        explicit_init_mode(args) or "full",
     )
     action = prompt_choice(
         "Action",
@@ -205,7 +221,7 @@ def apply_interactive_init(args: argparse.Namespace) -> None:
             ("dry-run", "preview diff only"),
             ("apply", "write AGENTS.md, creating a backup first when needed"),
         ],
-        "dry-run",
+        "apply",
     )
     replace = getattr(args, "replace", False)
     target_path = Path(target).expanduser()
@@ -668,7 +684,7 @@ def build_parser() -> argparse.ArgumentParser:
     self_uninstall.add_argument("--force", action="store_true")
     self_uninstall.set_defaults(func=cmd_self_uninstall)
 
-    init = sub.add_parser("init", help="Preview/apply project AGENTS.md setup")
+    init = sub.add_parser("init", help="Initialize project AGENTS.md; bare init opens the wizard")
     init.add_argument("target_arg", nargs="?", help="target directory (default: .)")
     init.add_argument("--target", help="target directory (overrides positional target)")
     init.add_argument("-i", "--interactive", action="store_true", help="ask target/mode/action with a small built-in menu")

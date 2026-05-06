@@ -15,28 +15,23 @@ The root `AGENTS.md` is intentionally **not** the template installed into other 
 
 ## Recommended install
 
-### 1. Link skills so repo edits auto-update local Codex skills
+Run this from the Coresearch repo:
 
 ```bash
-./harness link
+cd /path/to/coresearch
+./harness self-install
+harness link
+harness doctor --strict
 ```
 
-Equivalent:
+This installs two global user-level surfaces:
 
-```bash
-./scripts/install.sh --scope user --mode symlink --force
-```
+- `~/.local/bin/harness` as a symlink to this repo's CLI;
+- `${CODEX_HOME:-~/.codex}/skills/*` as symlinks to this repo's research skills.
 
-This creates symlinks such as:
+It does **not** modify `${CODEX_HOME:-~/.codex}/AGENTS.md` unless you explicitly run `harness global -y`.
 
-```text
-~/.codex/skills/paper-design  -> ./skills/paper-design
-~/.codex/skills/research-loop -> ./skills/research-loop
-```
-
-After this, edits in this repo's `skills/` directory are reflected in local Codex skill files. Restart Codex/OMX to refresh skill discovery metadata in an already-running session.
-
-### 2. Install the `harness` command
+### 1. Install the `harness` command
 
 ```bash
 ./harness self-install
@@ -63,6 +58,33 @@ Remove the installed command:
 harness self-uninstall
 ```
 
+### 2. Link global user skills so repo edits auto-update Codex skills
+
+```bash
+harness link
+```
+
+Equivalent:
+
+```bash
+./scripts/install.sh --scope user --mode symlink --force
+```
+
+This creates symlinks such as:
+
+```text
+~/.codex/skills/paper-design  -> ./skills/paper-design
+~/.codex/skills/research-loop -> ./skills/research-loop
+```
+
+After this, edits in this repo's `skills/` directory are reflected in local Codex skill files. Restart Codex/OMX to refresh skill discovery metadata in an already-running session.
+
+If you want a copy install instead of an auto-updating symlink install, use:
+
+```bash
+harness install --scope user
+```
+
 ### 3. Keep global OMX prompt unchanged by default
 
 Your global prompt should remain the OMX default:
@@ -87,14 +109,14 @@ harness repair
 If you want natural global routing into these research skills, add only the small bridge block:
 
 ```bash
-harness global          # dry-run diff
-harness global --apply
+harness global       # dry-run diff
+harness global -y    # apply
 ```
 
 Remove it later:
 
 ```bash
-harness global --remove --apply
+harness global --remove -y
 ```
 
 This does **not** replace the OMX global prompt; it only updates a marker-bounded block:
@@ -103,6 +125,24 @@ This does **not** replace the OMX global prompt; it only updates a marker-bounde
 <!-- RESEARCH_AGENT_SKILLS:START -->
 ...
 <!-- RESEARCH_AGENT_SKILLS:END -->
+```
+
+### Global skills vs. global AGENTS.md
+
+These are separate:
+
+| Surface | Command | Default behavior |
+|---|---|---|
+| Global user skills | `harness link` | Symlinks Coresearch skills into `~/.codex/skills` |
+| Global OMX prompt | `harness global -y` | Optional bridge only; never replaced by default |
+| Project prompt | `harness init` | Adds bridge or full research prompt to one repo |
+
+Recommended default:
+
+```text
+~/.codex/AGENTS.md       = OMX default
+~/.codex/skills/*        = Coresearch skills symlinked by harness link
+project/AGENTS.md        = bridge or full research prompt from harness init
 ```
 
 ## Project initialization
@@ -115,7 +155,21 @@ For normal use, just run:
 harness init
 ```
 
-In an interactive terminal this opens a small built-in menu, similar to a dropdown:
+This opens a small built-in menu, similar to a dropdown. Bare `harness init` defaults to the fast project-start path:
+
+```text
+target = .
+mode   = full
+action = apply
+```
+
+Equivalently, when piping answers into the menu, use Enter / `2` / `2`:
+
+```bash
+printf '\n2\n2\n' | harness init
+```
+
+The wizard still prints a diff before writing, creates a backup when replacing an existing file, and refuses to replace an existing `AGENTS.md` in `full` mode unless replacement is explicitly allowed.
 
 1. choose the target directory;
 2. choose `bridge` or `full`;
@@ -129,17 +183,16 @@ harness init . --interactive
 harness init . -i
 ```
 
-No extra Python packages are required. In non-interactive contexts, such as scripts or CI, use the explicit flags below.
+No extra Python packages are required. In scripts or CI, use the explicit flags below; explicit target/mode forms remain dry-run unless `-y`/`--apply` is passed.
 
-### Safe default: project bridge
+### Conservative project bridge
 
 Use this for most research repos. It preserves any existing project `AGENTS.md` and adds a small research bridge block.
 
 ```bash
 cd /path/to/research-repo
-harness init              # same as: harness init . --bridge
-harness init .            # explicit positional target
-harness init -y
+harness init . --bridge      # dry-run diff
+harness init . --bridge -y   # apply
 ```
 
 Equivalent explicit form:
@@ -178,7 +231,7 @@ harness init /path/to/research-repo --mode full --apply
 
 ### Diff before writing
 
-All prompt writes are dry-run by default:
+Explicit flag-based prompt writes are dry-run by default; the bare interactive wizard defaults to apply but still prints the diff before writing.
 
 ```bash
 harness diff /path/to/research-repo --bridge
@@ -240,9 +293,9 @@ harness self-uninstall                 # remove installed harness command
 harness global                         # dry-run global bridge diff
 harness global -y                      # apply global bridge
 harness global --remove -y             # remove global bridge
-harness init                           # interactive wizard in a TTY; bridge dry-run in scripts
+harness init                           # interactive wizard; defaults to . / full / apply
 harness init .                         # dry-run bridge install for explicit target
-harness init . --interactive           # force wizard for a target
+harness init . --interactive           # force wizard for a target; defaults to full/apply
 harness init . -y                      # apply bridge to current dir
 harness init . --full -y               # apply full research template
 harness diff . --full
@@ -272,6 +325,7 @@ It checks:
 - `pdf-crawl` safety flags and dry-run behavior;
 - user copy install and bridge idempotency;
 - user symlink install for repo-auto-update;
+- `harness install` user/project wrapper behavior;
 - `harness link/status`;
 - `harness self-install/self-uninstall`;
 - `harness global` dry/apply/remove;

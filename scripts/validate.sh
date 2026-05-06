@@ -54,6 +54,11 @@ assert not files_with_cr, files_with_cr
 readme = Path('README.md').read_text()
 assert 'positional target is planned' not in readme
 assert 'planned ergonomic alias' not in readme
+assert 'harness init              # same as' not in readme
+assert '/Users/alansynn' not in readme
+assert 'Global skills vs. global AGENTS.md' in readme
+assert 'harness link' in readme and 'harness global -y' in readme
+assert 'defaults to . / full / apply' in readme
 
 agents = Path('templates/research/AGENTS.md').read_text()
 required = [
@@ -141,6 +146,12 @@ resolved="$(python3 -c 'import pathlib,sys; print(pathlib.Path(sys.argv[1]).reso
 [[ "$resolved" == "$ROOT_DIR/skills/research-loop" ]] || fail "user symlink target mismatch: $resolved"
 pass "user install symlink mode for repo-auto-update"
 
+harness_copy_home="$(mktemp -d)"
+./harness install --scope user --codex-home "$harness_copy_home" >/tmp/research-skills-harness-install-user-copy.txt
+[[ -f "$harness_copy_home/skills/research-loop/SKILL.md" ]] || fail "harness install user copy missing research-loop"
+[[ ! -L "$harness_copy_home/skills/research-loop" ]] || fail "harness install user copy unexpectedly symlinked research-loop"
+pass "harness install user copy mode"
+
 harness_home="$(mktemp -d)"
 ./harness link --codex-home "$harness_home" >/tmp/research-skills-harness-link.txt
 [[ -L "$harness_home/skills/research-loop" ]] || fail "harness link did not symlink research-loop"
@@ -218,11 +229,12 @@ grep -q 'RESEARCH_AGENT_SKILLS:START' "$target_override_b/AGENTS.md" || fail "--
 pass "harness init shorthand/target-override bridge dry/apply/idempotent"
 
 wizard_full="$(mktemp -d)"
-printf '%s\n2\n2\n' "$wizard_full" | ./harness init -i >/tmp/research-skills-harness-init-wizard.txt
+(cd "$wizard_full" && printf '\n2\n2\n' | "$ROOT_DIR/harness" init) >/tmp/research-skills-harness-init-wizard.txt
 grep -q 'Interactive project setup' /tmp/research-skills-harness-init-wizard.txt || fail "harness init interactive wizard did not start"
 grep -q 'Selected mode: full' /tmp/research-skills-harness-init-wizard.txt || fail "harness init interactive wizard did not select full mode"
+grep -q 'Selected action: apply' /tmp/research-skills-harness-init-wizard.txt || fail "harness init interactive wizard did not select apply action"
 cmp -s templates/research/AGENTS.md "$wizard_full/AGENTS.md" || fail "harness init interactive wizard did not write full template"
-pass "harness init interactive wizard full apply"
+pass "harness init bare interactive wizard defaults to . / full / apply"
 
 rollback_project="$(mktemp -d)"
 printf 'ORIGINAL\n' > "$rollback_project/AGENTS.md"
@@ -251,6 +263,12 @@ project_dir="$(mktemp -d)"
 [[ -L "$project_dir/.codex/skills/research-loop" ]] || fail "project symlink install missing research-loop symlink"
 grep -q 'RESEARCH_AGENT_SKILLS:START' "$project_dir/AGENTS.md" || fail "project bridge missing"
 pass "project install symlink mode and bridge"
+
+harness_project_install="$(mktemp -d)"
+./harness install --scope project --project-dir "$harness_project_install" --project-bridge >/tmp/research-skills-harness-install-project.txt
+[[ -f "$harness_project_install/.codex/skills/research-loop/SKILL.md" ]] || fail "harness install project missing research-loop"
+grep -q 'RESEARCH_AGENT_SKILLS:START' "$harness_project_install/AGENTS.md" || fail "harness install project bridge missing"
+pass "harness install project copy mode and bridge"
 
 project_full="$(mktemp -d)"
 ./scripts/install.sh --scope project --project-dir "$project_full" --full-project-agents >/tmp/research-skills-install-full-project.txt

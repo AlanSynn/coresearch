@@ -30,8 +30,8 @@ Use the harness as the primary operational surface:
 ```bash
 ./harness status
 ./harness link
-./harness init /path/to/repo --mode bridge
-./harness init /path/to/repo --mode full --apply
+./harness init /path/to/repo --bridge
+./harness init /path/to/repo --full -y
 ./harness global
 ./harness doctor --strict
 ./harness repair

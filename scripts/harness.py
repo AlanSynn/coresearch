@@ -185,7 +185,7 @@ def should_interactive_init(args: argparse.Namespace) -> bool:
     if getattr(args, "interactive", False):
         return True
     raw_argv = getattr(args, "_raw_argv", [])
-    return raw_argv == ["init"]
+    return raw_argv == ["init"] and sys.stdin.isatty()
 
 
 def explicit_init_mode(args: argparse.Namespace) -> str | None:
@@ -684,7 +684,7 @@ def build_parser() -> argparse.ArgumentParser:
     self_uninstall.add_argument("--force", action="store_true")
     self_uninstall.set_defaults(func=cmd_self_uninstall)
 
-    init = sub.add_parser("init", help="Initialize project AGENTS.md; bare init opens the wizard")
+    init = sub.add_parser("init", help="Initialize project AGENTS.md; bare TTY init opens the wizard")
     init.add_argument("target_arg", nargs="?", help="target directory (default: .)")
     init.add_argument("--target", help="target directory (overrides positional target)")
     init.add_argument("-i", "--interactive", action="store_true", help="ask target/mode/action with a small built-in menu")

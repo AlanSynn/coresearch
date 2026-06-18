@@ -228,13 +228,20 @@ target_override_b="$(mktemp -d)"
 grep -q 'RESEARCH_AGENT_SKILLS:START' "$target_override_b/AGENTS.md" || fail "--target override did not write chosen target"
 pass "harness init shorthand/target-override bridge dry/apply/idempotent"
 
+noninteractive_init="$(mktemp -d)"
+printf 'ORIGINAL\n' > "$noninteractive_init/AGENTS.md"
+(cd "$noninteractive_init" && "$ROOT_DIR/harness" init </dev/null) >/tmp/research-skills-harness-init-nontty.txt
+grep -q 'Dry run only' /tmp/research-skills-harness-init-nontty.txt || fail "harness init non-TTY did not stay dry-run"
+! grep -q 'Interactive project setup' /tmp/research-skills-harness-init-nontty.txt || fail "harness init non-TTY opened wizard"
+grep -q '^ORIGINAL$' "$noninteractive_init/AGENTS.md" || fail "harness init non-TTY modified existing AGENTS.md"
+
 wizard_full="$(mktemp -d)"
-(cd "$wizard_full" && printf '\n2\n2\n' | "$ROOT_DIR/harness" init) >/tmp/research-skills-harness-init-wizard.txt
+(cd "$wizard_full" && printf '\n2\n2\n' | "$ROOT_DIR/harness" init --interactive) >/tmp/research-skills-harness-init-wizard.txt
 grep -q 'Interactive project setup' /tmp/research-skills-harness-init-wizard.txt || fail "harness init interactive wizard did not start"
 grep -q 'Selected mode: full' /tmp/research-skills-harness-init-wizard.txt || fail "harness init interactive wizard did not select full mode"
 grep -q 'Selected action: apply' /tmp/research-skills-harness-init-wizard.txt || fail "harness init interactive wizard did not select apply action"
 cmp -s templates/research/AGENTS.md "$wizard_full/AGENTS.md" || fail "harness init interactive wizard did not write full template"
-pass "harness init bare interactive wizard defaults to . / full / apply"
+pass "harness init non-TTY safe; explicit wizard defaults to . / full / apply"
 
 rollback_project="$(mktemp -d)"
 printf 'ORIGINAL\n' > "$rollback_project/AGENTS.md"

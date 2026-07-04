@@ -46,7 +46,7 @@ usage() {
   cat <<USAGE
 Usage: scripts/install.sh [options]
 
-Install Research Agent Skills without replacing your OMX global prompt.
+Install Coresearch skills without replacing your OMX global prompt.
 
 Options:
   --scope user|project       Install to CODEX_HOME skills or project .codex skills. Default: user
@@ -205,7 +205,7 @@ prune_removed_skills() {
 bridge_block() {
   cat <<BRIDGE
 <!-- RESEARCH_AGENT_SKILLS:START -->
-Research Agent Skills are installed. For broad academic research tasks, load \`coresearch\` first; for narrow tasks, load the smallest matching skill: $ROLE_SKILLS.
+Coresearch skills are installed. For broad academic research tasks, load \`coresearch\` first; for narrow tasks, load the smallest matching skill: $ROLE_SKILLS.
 Keep research work cumulative in the current thread. Do not create \`.agents/\` chats or paper-state forests. Use \`.omx/\` only for explicit OMX workflows, hooks, recovery, or checkpointing. Verify current venue rules and citations from official/primary sources when exactness matters.
 <!-- RESEARCH_AGENT_SKILLS:END -->
 BRIDGE

@@ -46,7 +46,7 @@ def default_bin_dir() -> Path:
 def bridge_block() -> str:
     role_skills = ", ".join(f"`{name}`" for name in owned_skill_names() if name != "coresearch")
     return f"""{START}
-Research Agent Skills are installed. For broad academic research tasks, load `coresearch` first; for narrow tasks, load the smallest matching skill: {role_skills}.
+Coresearch skills are installed. For broad academic research tasks, load `coresearch` first; for narrow tasks, load the smallest matching skill: {role_skills}.
 Keep research work cumulative in the current thread. Do not create `.agents/` chats or paper-state forests. Use `.omx/` only for explicit OMX workflows, hooks, recovery, or checkpointing. Verify current venue rules and citations from official/primary sources when exactness matters.
 {END}
 """
@@ -765,7 +765,7 @@ def cmd_repair(args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(prog="harness", description="Research Agent Skills install/init/status harness")
+    p = argparse.ArgumentParser(prog="harness", description="Coresearch install/init/status harness")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     install = sub.add_parser("install", help="Install skills via scripts/install.sh")

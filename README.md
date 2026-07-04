@@ -1,4 +1,4 @@
-# Coresearch: Research Agent Skills for OMX
+# Coresearch for OMX
 
 Coresearch is an installable research-agent bundle for Codex + oh-my-codex (OMX). It keeps the OMX global prompt intact, installs complete research skills, and can initialize individual research projects with a small bridge block or a full research `AGENTS.md` template.
 
@@ -21,14 +21,15 @@ Run this from the Coresearch repo:
 ```bash
 cd /path/to/coresearch
 ./harness self-install
-harness link
+harness link --surface both
 harness doctor --strict
 ```
 
-This installs two global user-level surfaces:
+This installs the Coresearch command plus user-level skill surfaces:
 
 - `~/.local/bin/harness` as a symlink to this repo's CLI;
-- `${CODEX_HOME:-~/.codex}/skills/*` as symlinks to this repo's research skills.
+- `${CODEX_HOME:-~/.codex}/skills/*` as symlinks to this repo's research skills;
+- `${CLAUDE_HOME:-~/.claude}/skills/*` as symlinks when you use `harness link --surface both`.
 
 It does **not** modify `${CODEX_HOME:-~/.codex}/AGENTS.md` unless you explicitly run `harness global -y`.
 Use `coresearch` as the broad research router; use the role skills directly for narrow tasks.
@@ -64,32 +65,33 @@ Remove the installed command:
 harness self-uninstall
 ```
 
-### 2. Link global user skills so repo edits auto-update Codex skills
+### 2. Link global user skills so repo edits auto-update Codex/Claude skills
 
 ```bash
-harness link
+harness link --surface both
 ```
 
 Equivalent:
 
 ```bash
-./scripts/install.sh --scope user --mode symlink --force
+./scripts/install.sh --scope user --surface both --mode symlink --force
 ```
 
 This creates symlinks such as:
 
 ```text
-~/.codex/skills/coresearch    -> ./skills/coresearch
+~/.codex/skills/coresearch       -> ./skills/coresearch
+~/.claude/skills/coresearch      -> ./skills/coresearch
 ~/.codex/skills/research-design  -> ./skills/research-design
-~/.codex/skills/research-loop -> ./skills/research-loop
+~/.claude/skills/research-design -> ./skills/research-design
 ```
 
-After this, edits in this repo's `skills/` directory are reflected in local Codex skill files. Restart Codex/OMX to refresh skill discovery metadata in an already-running session.
+After this, edits in this repo's `skills/` directory are reflected in local Codex and Claude skill files. Restart Codex/OMX/Claude to refresh skill discovery metadata in an already-running session.
 
 If you want a copy install instead of an auto-updating symlink install, use:
 
 ```bash
-harness install --scope user
+harness install --scope user --surface both
 ```
 
 ### 3. Keep global OMX prompt unchanged by default
@@ -140,7 +142,7 @@ These are separate:
 
 | Surface | Command | Default behavior |
 |---|---|---|
-| Global user skills | `harness link` | Symlinks Coresearch skills into `~/.codex/skills` |
+| Global user skills | `harness link --surface both` | Symlinks Coresearch skills into `~/.codex/skills` and `~/.claude/skills` |
 | Global OMX prompt | `harness global -y` | Optional bridge only; never replaced by default |
 | Project prompt | `harness init` | Adds bridge or full research prompt to one repo |
 
@@ -148,7 +150,8 @@ Recommended default:
 
 ```text
 ~/.codex/AGENTS.md       = OMX default
-~/.codex/skills/*        = Coresearch skills symlinked by harness link
+~/.codex/skills/*        = Coresearch skills symlinked by harness link --surface both
+~/.claude/skills/*       = Coresearch skills symlinked by harness link --surface both
 project/AGENTS.md        = bridge or full research prompt from harness init
 ```
 

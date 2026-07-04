@@ -1,5 +1,5 @@
 {
-  "name": "research-agent-skills",
+  "name": "coresearch",
   "version": "1.0.0",
   "description": "Central Coresearch router plus OMX-compatible research-agent skills for paper design, review, surveys, rebuttals, autonomous loops, claim verification, reproducible engineering, figures, slides, and academic-argument PPTX decks.",
   "author": {
@@ -22,7 +22,7 @@
   ],
   "skills": "./skills/",
   "interface": {
-    "displayName": "Research Agent Skills",
+    "displayName": "Coresearch",
     "shortDescription": "Coresearch router plus research planning, writing, review, and reproducibility skills.",
     "longDescription": "A lean, cumulative Codex/OMX research-agent bundle for AI/ML/CV, Graphics/Visual Computing, Robotics, HCI, and hybrid research work. The coresearch router chooses the right stage, field mode, and role skill, then routes to complete skills for paper design, review, rewriting, related work, rebuttals, autonomous research loops, claim verification, research engineering, figures, slides, and owned PPTX deck mechanics and Claude pptx delegation. It avoids shim aliases and forced .agents chat folders, and uses .omx state only for explicit OMX workflows.",
     "developerName": "Alan Synn",

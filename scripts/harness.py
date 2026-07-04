@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import difflib
+import json
 import os
 import shutil
 import subprocess
@@ -11,22 +12,18 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 RESEARCH_TEMPLATE = ROOT / "templates" / "research" / "AGENTS.md"
+SKILL_MANIFEST = ROOT / "skills" / "manifest.json"
 
-SKILLS = [
-    "claim-check",
-    "paper-design",
-    "paper-figures",
-    "paper-proofread",
-    "paper-review",
-    "paper-rewrite",
-    "paper-survey",
-    "pdf-crawl",
-    "rebuttal-plan",
-    "research-engineer",
-    "research-guidelines",
-    "research-loop",
-    "research-slides",
-]
+
+def skill_manifest() -> dict:
+    return json.loads(SKILL_MANIFEST.read_text())
+
+
+def owned_skill_names() -> list[str]:
+    return [item["name"] for item in skill_manifest()["owned"]]
+
+
+SKILLS = owned_skill_names()
 
 START = "<!-- RESEARCH_AGENT_SKILLS:START -->"
 END = "<!-- RESEARCH_AGENT_SKILLS:END -->"
@@ -38,13 +35,18 @@ def codex_home(value: str | None = None) -> Path:
     return Path(value or os.environ.get("CODEX_HOME") or Path.home() / ".codex").expanduser().resolve()
 
 
+def claude_home(value: str | None = None) -> Path:
+    return Path(value or os.environ.get("CLAUDE_HOME") or Path.home() / ".claude").expanduser().resolve()
+
+
 def default_bin_dir() -> Path:
     return Path(os.environ.get("RESEARCH_HARNESS_BIN_DIR") or Path.home() / ".local" / "bin").expanduser().resolve()
 
 
 def bridge_block() -> str:
+    role_skills = ", ".join(f"`{name}`" for name in owned_skill_names() if name != "coresearch")
     return f"""{START}
-Research Agent Skills are installed. For academic research tasks, load `research-guidelines` plus the smallest matching skill: `paper-design`, `paper-rewrite`, `paper-review`, `paper-survey`, `claim-check`, `rebuttal-plan`, `paper-figures`, `paper-proofread`, `research-engineer`, `research-loop`, `research-slides`, or `pdf-crawl`.
+Research Agent Skills are installed. For broad academic research tasks, load `coresearch` first; for narrow tasks, load the smallest matching skill: {role_skills}.
 Keep research work cumulative in the current thread. Do not create `.agents/` chats or paper-state forests. Use `.omx/` only for explicit OMX workflows, hooks, recovery, or checkpointing. Verify current venue rules and citations from official/primary sources when exactness matters.
 {END}
 """
@@ -75,9 +77,6 @@ def project_agents_candidate(target: Path, mode: str, replace: bool) -> str:
     if mode == "bridge":
         return upsert_bridge_text(current)
     if mode == "full":
-        if path.exists() and not replace:
-            # Candidate is still full replacement for diff display, but apply refuses.
-            pass
         return RESEARCH_TEMPLATE.read_text()
     raise ValueError(mode)
 
@@ -255,9 +254,11 @@ def assert_no_broken_repo_symlinks() -> list[Path]:
 
 def cmd_install(args: argparse.Namespace) -> int:
     script = ROOT / "scripts" / "install.sh"
-    cmd = [str(script), "--scope", args.scope, "--mode", args.mode]
+    cmd = [str(script), "--scope", args.scope, "--surface", args.surface, "--mode", args.mode]
     if args.codex_home:
         cmd += ["--codex-home", str(codex_home(args.codex_home))]
+    if args.claude_home:
+        cmd += ["--claude-home", str(claude_home(args.claude_home))]
     if args.project_dir:
         cmd += ["--project-dir", str(Path(args.project_dir).expanduser().resolve())]
     if args.global_bridge:
@@ -273,6 +274,8 @@ def cmd_link(args: argparse.Namespace) -> int:
     args.scope = "user"
     args.mode = "symlink"
     args.force = True
+    if not hasattr(args, "surface") or not args.surface:
+        args.surface = "codex"
     return cmd_install(args)
 
 
@@ -504,6 +507,112 @@ def cmd_status(args: argparse.Namespace) -> int:
     return 0
 
 
+def read_skill_name_and_description(skill_dir: Path) -> tuple[str, str]:
+    skill_file = skill_dir / "SKILL.md"
+    name = skill_dir.name
+    description = ""
+    if not skill_file.exists():
+        return name, description
+    text = skill_file.read_text(errors="replace")
+    if text.startswith("---\n"):
+        try:
+            frontmatter = text.split("---\n", 2)[1]
+        except IndexError:
+            frontmatter = ""
+        for line in frontmatter.splitlines():
+            if line.startswith("name:"):
+                name = line.split(":", 1)[1].strip().strip("\"'")
+            elif line.startswith("description:"):
+                description = line.split(":", 1)[1].strip().strip("\"'")
+    return name, description
+
+
+def inventory_roots(args: argparse.Namespace) -> list[tuple[str, Path]]:
+    codex = codex_home(args.codex_home)
+    claude = claude_home(args.claude_home)
+    roots: list[tuple[str, Path]] = [
+        ("codex-user", codex / "skills"),
+        ("codex-system", codex / "skills" / ".system"),
+        ("claude-user", claude / "skills"),
+    ]
+    if args.include_plugins:
+        roots.extend(
+            [
+                ("codex-cache", codex / "plugins" / "cache"),
+                ("claude-marketplace", claude / "plugins" / "marketplaces"),
+                ("claude-cache", claude / "plugins" / "cache"),
+            ]
+        )
+    return roots
+
+
+def iter_skill_dirs(root: Path, *, recursive: bool) -> list[Path]:
+    if not root.exists():
+        return []
+    pattern = "**/SKILL.md" if recursive else "*/SKILL.md"
+    dirs = {path.parent for path in root.glob(pattern)}
+    if not recursive:
+        dirs.update(path for path in root.iterdir() if path.is_dir() or path.is_symlink())
+    return sorted(dirs)
+
+
+def classify_skill(name: str, surface: str, manifest: dict, skill_dir: Path) -> str:
+    owned = {item["name"] for item in manifest["owned"]}
+    companions = {item["name"] for item in manifest.get("companions", [])}
+    external = set(manifest.get("external_routes", []))
+    preferences = set(manifest.get("preferences", []))
+    plugin_surface = surface in {"codex-cache", "claude-marketplace", "claude-cache"}
+    if surface == "codex-system":
+        return "system"
+    if not (skill_dir / "SKILL.md").exists():
+        target = str(skill_dir.resolve(strict=False)) if skill_dir.is_symlink() else ""
+        if ".orchestra" in target:
+            return "legacy-orchestra"
+        return "non-skill"
+    if name in owned:
+        return "plugin-overlap" if plugin_surface else "owned"
+    if name in companions:
+        return "companion"
+    if name in preferences or name.startswith(("caveman", "ponytail")) or name == "cavecrew":
+        return "preference"
+    if name in external or name.startswith("omx-"):
+        return "external-route"
+    return "unknown"
+
+
+def cmd_inventory(args: argparse.Namespace) -> int:
+    manifest = skill_manifest()
+    print("# Coresearch skill inventory")
+    print(f"Repo: {ROOT}")
+    print(f"CODEX_HOME: {codex_home(args.codex_home)}")
+    print(f"CLAUDE_HOME: {claude_home(args.claude_home)}")
+    print()
+    print("surface\tclass\tname\tkind\tpath\ttarget\tdescription")
+    for surface, root in inventory_roots(args):
+        recursive = "plugin" in surface or "marketplace" in surface or "cache" in surface
+        for skill_dir in iter_skill_dirs(root, recursive=recursive):
+            if ".system" in skill_dir.parts and surface != "codex-system":
+                continue
+            name, description = read_skill_name_and_description(skill_dir)
+            kind = "symlink" if skill_dir.is_symlink() else "dir"
+            target = str(skill_dir.resolve(strict=False)) if skill_dir.is_symlink() else ""
+            klass = classify_skill(name, surface, manifest, skill_dir)
+            print(
+                "\t".join(
+                    [
+                        surface,
+                        klass,
+                        name,
+                        kind,
+                        str(skill_dir),
+                        target,
+                        description.replace("\t", " ")[:160],
+                    ]
+                )
+            )
+    return 0
+
+
 def cmd_doctor(args: argparse.Namespace) -> int:
     home = codex_home(args.codex_home)
     target = Path(arg_target(args)).expanduser().resolve()
@@ -601,6 +710,8 @@ def cmd_update(args: argparse.Namespace) -> int:
     if not args.no_link:
         link_args = argparse.Namespace(
             codex_home=args.codex_home,
+            claude_home=args.claude_home,
+            surface=args.surface,
             global_bridge=args.global_bridge,
             project_bridge=False,
             project_dir=None,
@@ -622,6 +733,8 @@ def cmd_update(args: argparse.Namespace) -> int:
 def cmd_repair(args: argparse.Namespace) -> int:
     link_args = argparse.Namespace(
         codex_home=args.codex_home,
+        claude_home=getattr(args, "claude_home", None),
+        surface=getattr(args, "surface", "codex"),
         global_bridge=args.global_bridge,
         project_bridge=False,
         project_dir=None,
@@ -657,8 +770,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     install = sub.add_parser("install", help="Install skills via scripts/install.sh")
     install.add_argument("--scope", choices=["user", "project"], default="user")
+    install.add_argument("--surface", choices=["codex", "claude", "both"], default="codex")
     install.add_argument("--mode", choices=["copy", "symlink"], default="copy")
     install.add_argument("--codex-home")
+    install.add_argument("--claude-home")
     install.add_argument("--project-dir")
     install.add_argument("--global-bridge", action="store_true")
     install.add_argument("--project-bridge", action="store_true")
@@ -666,7 +781,9 @@ def build_parser() -> argparse.ArgumentParser:
     install.set_defaults(func=cmd_install)
 
     link = sub.add_parser("link", help="Symlink user-scope skills so repo edits reflect locally")
+    link.add_argument("--surface", choices=["codex", "claude", "both"], default="codex")
     link.add_argument("--codex-home")
+    link.add_argument("--claude-home")
     link.add_argument("--global-bridge", action="store_true")
     link.add_argument("--project-bridge", action="store_true")
     link.add_argument("--project-dir")
@@ -723,6 +840,12 @@ def build_parser() -> argparse.ArgumentParser:
     status.add_argument("--target", help="target directory (overrides positional target)")
     status.set_defaults(func=cmd_status)
 
+    inventory = sub.add_parser("inventory", help="Audit Codex/Claude skills and classify Coresearch ownership")
+    inventory.add_argument("--codex-home")
+    inventory.add_argument("--claude-home")
+    inventory.add_argument("--include-plugins", action="store_true", help="also scan Claude plugin marketplaces/cache")
+    inventory.set_defaults(func=cmd_inventory)
+
     doctor = sub.add_parser("doctor", help="Run install/runtime checks")
     doctor.add_argument("--codex-home")
     doctor.add_argument("target_arg", nargs="?", help="target directory (default: .)")
@@ -736,6 +859,8 @@ def build_parser() -> argparse.ArgumentParser:
     repair.add_argument("target_arg", nargs="?", help="target directory for doctor (default: .)")
     repair.add_argument("--target", help="target directory (overrides positional target)")
     repair.add_argument("--codex-home")
+    repair.add_argument("--claude-home")
+    repair.add_argument("--surface", choices=["codex", "claude", "both"], default="codex")
     repair.add_argument("--bin-dir")
     repair.add_argument("--name", default="harness")
     repair.add_argument("--global-bridge", action="store_true")
@@ -746,6 +871,8 @@ def build_parser() -> argparse.ArgumentParser:
     update = sub.add_parser("update", help="Optionally pull, relink user skills, and validate")
     update.add_argument("--pull", action="store_true", help="run git pull --ff-only before relinking")
     update.add_argument("--codex-home")
+    update.add_argument("--claude-home")
+    update.add_argument("--surface", choices=["codex", "claude", "both"], default="codex")
     update.add_argument("--global-bridge", action="store_true")
     update.add_argument("--no-link", action="store_true")
     update.add_argument("--no-validate", action="store_true")

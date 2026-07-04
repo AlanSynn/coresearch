@@ -1,11 +1,30 @@
 ---
-name: paper-proofread
+name: research-proofread
 description: Final line-level proofreading workflow for academic manuscripts and LaTeX papers. Use when the user asks to proofread, check grammar, polish wording, inspect LaTeX formatting, notation, citations-as-written, captions, tables, acronym consistency, or find small errors. Phase 1 reports issues only; edits files only after approval.
 ---
 
-# Paper Proofread
+# Research Proofread
 
-Perform a final line-level pass. This skill is not a venue review and not a contribution critique; use `paper-review` for acceptance risk and `paper-rewrite` for structural rewriting.
+Perform a final line-level pass. This skill is not a venue review and not a contribution critique; use `research-review` for acceptance risk and `research-write` for structural rewriting.
+
+## Good for
+
+- Final grammar, LaTeX, notation, acronym, caption, table, reference-as-written, and consistency checks.
+- Safe local polishing after contribution, evidence, and structure are already settled.
+- Read-only verifier passes before submission.
+
+## Must do
+
+- Preserve technical meaning and author voice.
+- Report issue severity and proposed fix.
+- Keep Phase 1 read-only unless pasted text asks for direct corrected output.
+- Ask/require approval before editing files.
+
+## Not for
+
+- Reframing contributions or changing paper structure; use `research-design` or `research-write`.
+- Acceptance scoring; use `research-review`.
+- Adding new citations, results, or claims.
 
 ## Default policy
 

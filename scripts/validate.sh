@@ -19,7 +19,7 @@ pass "plugin manifest JSON parses"
 python3 - <<'PY'
 from pathlib import Path
 
-for rel in ("skills/pdf-crawl/crawler.py", "scripts/harness.py"):
+for rel in ("skills/research-pdfs/crawler.py", "scripts/harness.py"):
     text = Path(rel).read_text()
     compile(text, rel, "exec")
 PY
@@ -81,6 +81,15 @@ assert manifest['skills'] == './skills/'
 for forbidden in ('agents', 'prompts', 'hooks'):
     assert forbidden not in manifest, forbidden
 
+skill_manifest = json.loads(Path('skills/manifest.json').read_text())
+expected = {item['name'] for item in skill_manifest['owned']}
+assert 'coresearch' in expected
+assert all(Path('skills', name, 'SKILL.md').exists() for name in expected)
+assert 'aliases' not in skill_manifest
+assert {item['name'] for item in skill_manifest.get('companions', [])}
+assert {'caveman', 'ponytail'} <= set(skill_manifest.get('preferences', []))
+assert set(skill_manifest.get('external_routes', []))
+
 skills = []
 for f in sorted(Path('skills').glob('*/SKILL.md')):
     text = f.read_text()
@@ -95,21 +104,15 @@ for f in sorted(Path('skills').glob('*/SKILL.md')):
     assert fm.get('description') and len(fm['description']) > 40, f
     skills.append(fm['name'])
 
-expected = {
-    'claim-check', 'paper-design', 'paper-figures', 'paper-proofread',
-    'paper-review', 'paper-rewrite', 'paper-survey', 'pdf-crawl',
-    'rebuttal-plan', 'research-engineer', 'research-guidelines',
-    'research-loop', 'research-slides'
-}
 assert set(skills) == expected, sorted(set(skills) ^ expected)
 print(f'PASS: skill frontmatter and catalog set ({len(skills)} skills)')
 PY
 
-python3 skills/pdf-crawl/crawler.py --help >/tmp/research-skills-pdf-help.txt
+python3 skills/research-pdfs/crawler.py --help >/tmp/research-skills-pdf-help.txt
 grep -q -- '--dry-run' /tmp/research-skills-pdf-help.txt
 grep -q -- '--yes-large' /tmp/research-skills-pdf-help.txt
 grep -q -- '--allow-publisher-pdf' /tmp/research-skills-pdf-help.txt
-pass "pdf-crawl safety flags exposed"
+pass "research-pdfs safety flags exposed"
 
 sample_dir="$(mktemp -d)"
 cat > "$sample_dir/papers.md" <<'MD'
@@ -117,17 +120,17 @@ cat > "$sample_dir/papers.md" <<'MD'
 |---|---|---|---|---|
 | 1 | Attention Is All You Need | Vaswani et al. | NeurIPS | 2017 |
 MD
-python3 skills/pdf-crawl/crawler.py "$sample_dir/papers.md" --dry-run --limit 1 >/tmp/research-skills-pdf-dryrun.txt
+python3 skills/research-pdfs/crawler.py "$sample_dir/papers.md" --dry-run --limit 1 >/tmp/research-skills-pdf-dryrun.txt
 if [[ -d "$sample_dir/pdf" ]] && find "$sample_dir/pdf" -type f | grep -q .; then
-  fail "pdf-crawl dry run created PDF files"
+  fail "research-pdfs dry run created PDF files"
 fi
-pass "pdf-crawl dry run does not download files"
+pass "research-pdfs dry run does not download files"
 
 user_home="$(mktemp -d)"
 echo "GLOBAL HEADER" > "$user_home/AGENTS.md"
 ./scripts/install.sh --scope user --codex-home "$user_home" --global-bridge >/tmp/research-skills-install-user-1.txt
 [[ -f "$user_home/skills/research-loop/SKILL.md" ]] || fail "user install missing research-loop"
-[[ -f "$user_home/skills/pdf-crawl/crawler.py" ]] || fail "user install missing crawler"
+[[ -f "$user_home/skills/research-pdfs/crawler.py" ]] || fail "user install missing crawler"
 grep -q 'GLOBAL HEADER' "$user_home/AGENTS.md" || fail "existing global AGENTS content was not preserved"
 grep -q 'RESEARCH_AGENT_SKILLS:START' "$user_home/AGENTS.md" || fail "user bridge missing"
 count="$(grep -c 'RESEARCH_AGENT_SKILLS:START' "$user_home/AGENTS.md")"
@@ -139,8 +142,23 @@ ls "$user_home"/AGENTS.md.bak.* >/dev/null 2>&1 || fail "bridge backup missing o
 pass "user install copy mode and bridge idempotency"
 
 user_link_home="$(mktemp -d)"
-./scripts/install.sh --scope user --codex-home "$user_link_home" --mode symlink --force >/tmp/research-skills-install-user-symlink.txt
-[[ -L "$user_link_home/skills/paper-design" ]] || fail "user symlink install missing paper-design symlink"
+mkdir -p "$user_link_home/skills"
+ln -s "$ROOT_DIR/skills/paper-design" "$user_link_home/skills/paper-design"
+mkdir -p "$user_link_home/skills/paper-review"
+cat > "$user_link_home/skills/paper-review/SKILL.md" <<'MD'
+---
+name: paper-review
+description: Venue-calibrated simulated review and score forecast for research papers.
+---
+# Paper Review
+MD
+ln -s "$user_link_home/not-coresearch" "$user_link_home/skills/claim-check"
+./scripts/install.sh --scope user --codex-home "$user_link_home" --mode symlink --force >/tmp/research-skills-install-user-symlink.txt 2>/tmp/research-skills-install-user-symlink.err
+[[ -L "$user_link_home/skills/research-design" ]] || fail "user symlink install missing research-design symlink"
+[[ ! -e "$user_link_home/skills/paper-design" && ! -L "$user_link_home/skills/paper-design" ]] || fail "user symlink install unexpectedly kept paper-design alias"
+[[ ! -e "$user_link_home/skills/paper-review" && ! -L "$user_link_home/skills/paper-review" ]] || fail "user symlink install unexpectedly kept copied paper-review alias"
+[[ -L "$user_link_home/skills/claim-check" ]] || fail "user symlink install pruned non-Coresearch broken legacy-name symlink"
+grep -q 'points outside Coresearch' /tmp/research-skills-install-user-symlink.err || fail "user symlink install did not warn for non-Coresearch broken legacy-name symlink"
 [[ -L "$user_link_home/skills/research-loop" ]] || fail "user symlink install missing research-loop symlink"
 resolved="$(python3 -c 'import pathlib,sys; print(pathlib.Path(sys.argv[1]).resolve())' "$user_link_home/skills/research-loop")"
 [[ "$resolved" == "$ROOT_DIR/skills/research-loop" ]] || fail "user symlink target mismatch: $resolved"
@@ -158,6 +176,47 @@ harness_home="$(mktemp -d)"
 ./harness status --codex-home "$harness_home" --target . >/tmp/research-skills-harness-status.txt
 grep -q 'research-loop: symlink:OK' /tmp/research-skills-harness-status.txt || fail "harness status did not report symlink OK"
 pass "harness link/status"
+
+both_codex_home="$(mktemp -d)"
+both_claude_home="$(mktemp -d)"
+./harness link --surface both --codex-home "$both_codex_home" --claude-home "$both_claude_home" >/tmp/research-skills-harness-link-both.txt
+[[ -L "$both_codex_home/skills/coresearch" ]] || fail "harness link both missing codex coresearch"
+[[ -L "$both_claude_home/skills/coresearch" ]] || fail "harness link both missing claude coresearch"
+[[ -L "$both_claude_home/skills/research-design" ]] || fail "harness link both missing claude research-design"
+[[ ! -e "$both_claude_home/skills/paper-design" && ! -L "$both_claude_home/skills/paper-design" ]] || fail "harness link both unexpectedly kept claude paper-design alias"
+mkdir -p "$both_codex_home/plugins/cache/vendor/skills/pptx"
+cat > "$both_codex_home/plugins/cache/vendor/skills/pptx/SKILL.md" <<'MD'
+---
+name: pptx
+description: External Codex plugin PPTX skill with same name as Coresearch-owned skill.
+---
+# External PPTX
+MD
+mkdir -p "$both_claude_home/plugins/marketplaces/vendor/skills/pptx"
+cat > "$both_claude_home/plugins/marketplaces/vendor/skills/pptx/SKILL.md" <<'MD'
+---
+name: pptx
+description: External Claude plugin PPTX skill with same name as Coresearch-owned skill.
+---
+# External PPTX
+MD
+mkdir -p "$both_codex_home/plugins/cache/vendor/skills/ponytail"
+cat > "$both_codex_home/plugins/cache/vendor/skills/ponytail/SKILL.md" <<'MD'
+---
+name: ponytail
+description: External preference skill for over-engineering review.
+---
+# Ponytail
+MD
+ln -s "$both_codex_home/.orchestra/skills/old-research" "$both_codex_home/skills/old-research"
+./harness inventory --codex-home "$both_codex_home" --claude-home "$both_claude_home" --include-plugins >/tmp/research-skills-harness-inventory-overlap.txt
+grep -q $'codex-user\towned\tpptx' /tmp/research-skills-harness-inventory-overlap.txt || fail "inventory did not classify codex user pptx as owned"
+grep -q $'claude-user\towned\tpptx' /tmp/research-skills-harness-inventory-overlap.txt || fail "inventory did not classify claude user pptx as owned"
+grep -q $'codex-cache\tplugin-overlap\tpptx' /tmp/research-skills-harness-inventory-overlap.txt || fail "inventory did not classify codex cache pptx as plugin-overlap"
+grep -q $'claude-marketplace\tplugin-overlap\tpptx' /tmp/research-skills-harness-inventory-overlap.txt || fail "inventory did not classify marketplace pptx as plugin-overlap"
+grep -q $'codex-cache\tpreference\tponytail' /tmp/research-skills-harness-inventory-overlap.txt || fail "inventory did not classify ponytail as preference"
+grep -q $'codex-user\tlegacy-orchestra\told-research' /tmp/research-skills-harness-inventory-overlap.txt || fail "inventory did not surface legacy orchestra symlink"
+pass "harness link --surface both"
 
 cmd_bin="$(mktemp -d)"
 ./harness self-install --bin-dir "$cmd_bin" >/tmp/research-skills-harness-self-install.txt
@@ -211,6 +270,13 @@ update_home="$(mktemp -d)"
 [[ -L "$update_home/skills/research-loop" ]] || fail "harness update did not relink skills"
 grep -q 'Update complete' /tmp/research-skills-harness-update.txt || fail "harness update did not complete"
 pass "harness update relink"
+
+update_both_codex_home="$(mktemp -d)"
+update_both_claude_home="$(mktemp -d)"
+./harness update --surface both --codex-home "$update_both_codex_home" --claude-home "$update_both_claude_home" --no-validate >/tmp/research-skills-harness-update-both.txt
+[[ -L "$update_both_codex_home/skills/research-loop" ]] || fail "harness update --surface both missing codex link"
+[[ -L "$update_both_claude_home/skills/research-loop" ]] || fail "harness update --surface both missing claude link"
+pass "harness update --surface both relink"
 
 harness_project="$(mktemp -d)"
 ./harness init "$harness_project" --bridge >/tmp/research-skills-harness-init-dry.txt
@@ -266,7 +332,8 @@ pass "harness init full shorthand and legacy template copy"
 
 project_dir="$(mktemp -d)"
 ./scripts/install.sh --scope project --project-dir "$project_dir" --project-bridge --mode symlink >/tmp/research-skills-install-project.txt
-[[ -L "$project_dir/.codex/skills/paper-design" ]] || fail "project symlink install missing paper-design symlink"
+[[ -L "$project_dir/.codex/skills/research-design" ]] || fail "project symlink install missing research-design symlink"
+[[ ! -e "$project_dir/.codex/skills/paper-design" && ! -L "$project_dir/.codex/skills/paper-design" ]] || fail "project symlink install unexpectedly kept paper-design alias"
 [[ -L "$project_dir/.codex/skills/research-loop" ]] || fail "project symlink install missing research-loop symlink"
 grep -q 'RESEARCH_AGENT_SKILLS:START' "$project_dir/AGENTS.md" || fail "project bridge missing"
 pass "project install symlink mode and bridge"

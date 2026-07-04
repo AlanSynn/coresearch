@@ -1,11 +1,30 @@
 ---
-name: rebuttal-plan
+name: research-rebuttal
 description: Rebuttal and response-planning workflow for research paper reviews. Use when the user provides reviewer comments, scores, meta-reviews, or discussion-phase feedback and wants a response strategy, score movement forecast, experiments or clarifications to add, or concise rebuttal text for venues such as NeurIPS, ICLR, CVPR, SIGGRAPH, CHI, UIST, or AISTATS.
 ---
 
-# Rebuttal Plan
+# Research Rebuttal
 
 Turn reviews into a score-moving response strategy. Prioritize factual corrections, misunderstandings, and feasible evidence additions. Do not promise new experiments or claims unless the user confirms they can be done. In OMX workflows, keep this as a planning/handoff artifact; do not implement new experiments unless execution mode is explicitly selected.
+
+## Good for
+
+- Parsing reviews, diagnosing score blockers, planning response strategy, forecasting movement, and drafting concise rebuttal bullets.
+- Identifying which clarification, experiment, table, figure, or wording change can realistically move scores.
+- Separating legitimate weaknesses from reviewer misunderstandings.
+
+## Must do
+
+- Extract reviewer stance, confidence, positive anchors, and score-blocking concerns.
+- Classify concern type and leverage.
+- Prioritize consensus issues and high-leverage corrections; do not fight every sentence.
+- Avoid promises unless the user confirms the experiment/edit is feasible and allowed.
+
+## Not for
+
+- Running new experiments; hand off to `research-engineer` or an execution workflow.
+- Defensive or adversarial reviewer replies.
+- Inventing extra evidence or post-hoc claims.
 
 ## Inputs
 

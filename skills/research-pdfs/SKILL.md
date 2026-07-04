@@ -1,13 +1,32 @@
 ---
-name: pdf-crawl
+name: research-pdfs
 description: Batch-download open-access PDFs for papers listed in a markdown research roadmap or paper list. Use when the user asks to fetch PDFs, crawl PDFs from a markdown file, or download open-access papers from a verified list. Runs the bundled crawler script when appropriate and avoids paywall-circumvention fallbacks by default.
 ---
 
-# PDF Crawl
+# Research PDFs
 
 Download open-access PDFs for papers listed in a Markdown table. This is an optional utility skill, not a core paper-writing workflow.
 
-`paper-survey` may emit a compatible roadmap table when a literature survey needs PDF-backed evidence. Preserve the crawler's output categories so `paper-survey` can distinguish `PDF VERIFIED`, metadata-only, fuzzy, and not-found papers instead of assuming paper content.
+`research-survey` may emit a compatible roadmap table when a literature survey needs PDF-backed evidence. Preserve the crawler's output categories so `research-survey` can distinguish `PDF VERIFIED`, metadata-only, fuzzy, and not-found papers instead of assuming paper content.
+
+## Good for
+
+- Batch downloading open-access PDFs from a verified Markdown paper list.
+- Producing local PDFs for later `research-survey` or `research-verify` inspection.
+- Keeping fuzzy/not-found/open-access status explicit.
+
+## Must do
+
+- Dry-run before large or uncertain crawls.
+- Avoid paywall bypass and treat publisher PDF extraction as opt-in.
+- Preserve downloaded, skipped, fuzzy, and not-found categories.
+- State that downloaded PDFs prove access only, not claim correctness.
+
+## Not for
+
+- Generic PDF editing/OCR/merge/split; route to a `pdf` companion if installed.
+- Literature synthesis; use `research-survey`.
+- Treating fuzzy DOI or metadata matches as verified evidence.
 
 ## Supported input
 
@@ -32,15 +51,15 @@ It extracts title, authors, venue/journal, and year from `비고`.
 ## Invocation
 
 ```bash
-python3 skills/pdf-crawl/crawler.py "<path-to-roadmap.md>" --dry-run
-python3 skills/pdf-crawl/crawler.py "<path-to-roadmap.md>"
-python3 skills/pdf-crawl/crawler.py "<path-to-roadmap.md>" --yes-large
+python3 skills/research-pdfs/crawler.py "<path-to-roadmap.md>" --dry-run
+python3 skills/research-pdfs/crawler.py "<path-to-roadmap.md>"
+python3 skills/research-pdfs/crawler.py "<path-to-roadmap.md>" --yes-large
 ```
 
 Publisher landing-page `citation_pdf_url` lookup is opt-in only:
 
 ```bash
-python3 skills/pdf-crawl/crawler.py "<path-to-roadmap.md>" --allow-publisher-pdf
+python3 skills/research-pdfs/crawler.py "<path-to-roadmap.md>" --allow-publisher-pdf
 ```
 
 If this repository path is not current, resolve the script relative to this skill folder.

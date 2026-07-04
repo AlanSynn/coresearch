@@ -7,6 +7,25 @@ description: OMX-compatible autonomous research mission design for AI, graphics,
 
 Design a research loop that can run cumulatively in chat or hand off to OMX `$autoresearch`. The loop is artifact-gated: progress is complete only when evidence artifacts satisfy explicit validators, not when an agent says it is done.
 
+## Good for
+
+- Starting, steering, or auditing autonomous research missions.
+- Converting hypotheses into artifacts, validators, sandbox limits, stop conditions, and OMX handoff contracts.
+- Deciding whether `$autoresearch`, `$ralplan`, `$team`, or chat-only execution is appropriate.
+
+## Must do
+
+- Define mission, non-goals, hypotheses, artifacts, validators, sandbox, and stop conditions.
+- Use validator-gated completion, not “agent says done.”
+- Keep all state in chat or `.omx/` only when an OMX workflow is active/requested.
+- Require human/official evidence for claims that cannot be validated locally.
+
+## Not for
+
+- Ordinary paper planning without autonomous loop needs; use `research-design`.
+- Single experiment implementation; use `research-engineer`.
+- Creating legacy `.agents/` state, mailboxes, or ad-hoc multi-agent frameworks.
+
 ## When to use
 
 Use this skill for:
@@ -16,7 +35,7 @@ Use this skill for:
 - creating an OMX autoresearch mission after `$deep-interview --autoresearch`;
 - auditing an existing autonomous loop for weak validators, unsafe assumptions, or unverifiable claims.
 
-For ordinary paper planning, use `paper-design`. For implementation of a specific experiment, use `research-engineer`.
+For ordinary paper planning, use `research-design`. For implementation of a specific experiment, use `research-engineer`.
 
 ## Inputs
 

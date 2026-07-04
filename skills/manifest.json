@@ -1,0 +1,162 @@
+{
+  "schema_version": 1,
+  "bundle": "coresearch",
+  "owned": [
+    {
+      "name": "coresearch",
+      "role": "router",
+      "group": "core"
+    },
+    {
+      "name": "research-design",
+      "role": "design",
+      "group": "discovery"
+    },
+    {
+      "name": "research-survey",
+      "role": "survey",
+      "group": "discovery"
+    },
+    {
+      "name": "research-loop",
+      "role": "mission",
+      "group": "discovery"
+    },
+    {
+      "name": "research-engineer",
+      "role": "engineering",
+      "group": "build"
+    },
+    {
+      "name": "research-figures",
+      "role": "figures",
+      "group": "evidence"
+    },
+    {
+      "name": "research-pdfs",
+      "role": "utility",
+      "group": "evidence"
+    },
+    {
+      "name": "research-write",
+      "role": "write",
+      "group": "manuscript"
+    },
+    {
+      "name": "research-review",
+      "role": "review",
+      "group": "manuscript"
+    },
+    {
+      "name": "research-proofread",
+      "role": "proofread",
+      "group": "manuscript"
+    },
+    {
+      "name": "research-rebuttal",
+      "role": "rebuttal",
+      "group": "manuscript"
+    },
+    {
+      "name": "research-slides",
+      "role": "slides",
+      "group": "output"
+    },
+    {
+      "name": "pptx",
+      "role": "powerpoint",
+      "group": "output"
+    },
+    {
+      "name": "research-verify",
+      "role": "verify",
+      "group": "verify"
+    }
+  ],
+  "companions": [
+    {
+      "name": "academic-ppt",
+      "reason": "source-faithful academic .pptx from LaTeX/PDF, equations, defense/source-fidelity workflows; optional companion when source fidelity matters more than general PowerPoint mechanics"
+    },
+    {
+      "name": "docx",
+      "reason": "Word document IO/editing; route only when .docx involved"
+    },
+    {
+      "name": "pdf",
+      "reason": "generic PDF processing; keep research-pdfs focused on open-access literature fetch"
+    },
+    {
+      "name": "xlsx",
+      "reason": "spreadsheet data/analysis artifacts"
+    },
+    {
+      "name": "frontend-design",
+      "reason": "research demo UI and web artifact polish"
+    },
+    {
+      "name": "web-artifacts-builder",
+      "reason": "shareable web demos/artifacts"
+    },
+    {
+      "name": "frontend-skill",
+      "reason": "Codex frontend/UI skill for research demos; route only when UI deliverable exists"
+    }
+  ],
+  "preferences": [
+    "caveman",
+    "cavecrew",
+    "caveman-commit",
+    "caveman-compress",
+    "caveman-help",
+    "caveman-review",
+    "caveman-stats",
+    "ponytail",
+    "ponytail-audit",
+    "ponytail-debt",
+    "ponytail-gain",
+    "ponytail-help",
+    "ponytail-review"
+  ],
+  "external_routes": [
+    "autoresearch",
+    "autoresearch-goal",
+    "best-practice-research",
+    "plan",
+    "ralplan",
+    "ralph",
+    "ultragoal",
+    "team",
+    "ultrawork",
+    "ultraqa",
+    "analyze",
+    "design",
+    "code-review",
+    "security-review",
+    "visual-verdict",
+    "visual-ralph",
+    "token-router",
+    "performance-goal",
+    "caveman",
+    "cavecrew",
+    "ai-slop-cleaner",
+    "ask",
+    "ask-claude",
+    "ask-gemini",
+    "autopilot",
+    "cancel",
+    "configure-notifications",
+    "deep-interview",
+    "doctor",
+    "help",
+    "hud",
+    "note",
+    "pipeline",
+    "prometheus-strict",
+    "skill",
+    "trace",
+    "wiki",
+    "worker",
+    "omx-setup"
+  ]
+}

@@ -1,11 +1,30 @@
 ---
-name: paper-rewrite
+name: research-write
 description: Rewrite research paper sections with venue-aware argument, structure, and claim calibration. Use for abstracts, introductions, related work, methods, systems, evaluations, findings, discussions, limitations, conclusions, captions, and contribution bullets. Outputs polished text first, then concise diagnostics and remaining evidence risks.
 ---
 
-# Paper Rewrite
+# Research Write
 
 Rewrite paper text so it is clearer, more rigorous, and easier for reviewers to evaluate. Preserve the actual work and evidence. Do not add citations, results, participants, or novelty claims unless provided.
+
+## Good for
+
+- Abstracts, introductions, related work, methods/systems, evaluations/findings, discussions, limitations, captions, and contribution bullets.
+- Rewriting AI, Graphics, Robotics, HCI, or hybrid text to match the right field narrative.
+- Calibrating claims to actual evidence while preserving author intent.
+
+## Must do
+
+- Choose Ha-style technical systems, Oh-style design-computing, or hybrid dual-claim spine before rewriting.
+- Keep field tone matched: AI/Robotics precise and measurable; HCI situated and human/material-centered; Graphics representation/artifact-centered.
+- Preserve supplied facts and evidence; soften or flag claims that exceed evidence.
+- Output polished text first, then concise diagnostics.
+
+## Not for
+
+- Inventing missing results, citations, participants, datasets, baselines, or novelty.
+- Acceptance scoring; use `research-review`.
+- Final typo-only pass; use `research-proofread`.
 
 ## Inputs
 
@@ -24,8 +43,16 @@ If venue is missing, infer the closest mode and state the assumption.
 1. **Argument pass:** align title, abstract, intro, contributions, and conclusion around one central claim.
 2. **Structure pass:** make each section's role explicit; remove or move paragraphs that do not serve the claim.
 3. **Evidence pass:** soften claims that exceed supplied evidence.
-4. **Venue pass:** adjust norms for Graphics, AI/ML/CV, or HCI.
+4. **Venue pass:** adjust norms for AI/ML/CV, Robotics, Graphics, HCI, or hybrid.
 5. **Style pass:** remove hype, vague nouns, promotional language, and unsupported generalization.
+
+## Field rewrite rules
+
+- **AI/ML/CV:** make the bottleneck measurable; name formulation, baselines, ablations, datasets/splits, compute, and error modes when supplied.
+- **Robotics:** foreground embodied constraints: platform, sensing/action/contact, resets, safety, calibration, hardware or realistic-sim evidence, and deployment limits.
+- **Graphics:** foreground representation, geometric/physical correctness, authoring control, visual quality, runtime, galleries, comparisons, and failure cases.
+- **HCI:** foreground audience, practice, material/context, user agency, study/findings, artifacts, accessibility, and design implications.
+- **Hybrid:** connect workflow and mechanism in every paragraph; separate technical claim from design/workflow claim.
 
 ## Section patterns
 
@@ -68,6 +95,7 @@ Generalize carefully. For each limitation: what it affects, what it does not aff
 
 ## Diagnostics
 - Venue mode assumed: [mode]
+- Narrative spine used: [Ha / Oh / Hybrid]
 - Main change: [one sentence]
 - Claims softened or scoped: [bullets]
 - Evidence still needed: [bullets]

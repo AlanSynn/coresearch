@@ -8,7 +8,8 @@ Coresearch is an installable research-agent bundle for Codex + oh-my-codex (OMX)
 |---|---|---|
 | `AGENTS.md` | Development prompt for maintaining this Coresearch bundle | No |
 | `templates/research/AGENTS.md` | Full research-project prompt template | Copied by `harness init --full` |
-| `skills/*/SKILL.md` | Complete research skills | Symlinked/copied into `${CODEX_HOME:-~/.codex}/skills` or project `.codex/skills` |
+| `skills/*/SKILL.md` | Complete research skills | Symlinked/copied into `${CODEX_HOME:-~/.codex}/skills`, `${CLAUDE_HOME:-~/.claude}/skills`, or project `.codex/.claude` skill dirs |
+| `skills/manifest.json` | Coresearch-owned skills, companion routes, preferences, external OMX routes | Used by harness/validation |
 | `harness`, `bin/harness`, `scripts/harness.py` | CLI for install/init/status/diff/rollback/repair/update | `harness self-install` symlinks command into `~/.local/bin` |
 
 The root `AGENTS.md` is intentionally **not** the template installed into other projects. It is only for editing this bundle.
@@ -30,6 +31,11 @@ This installs two global user-level surfaces:
 - `${CODEX_HOME:-~/.codex}/skills/*` as symlinks to this repo's research skills.
 
 It does **not** modify `${CODEX_HOME:-~/.codex}/AGENTS.md` unless you explicitly run `harness global -y`.
+Use `coresearch` as the broad research router; use the role skills directly for narrow tasks.
+
+Coresearch uses canonical names only: `coresearch`, `research-*` role skills, and owned `pptx` for PowerPoint mechanics plus Claude `pptx` delegation. No shim aliases are installed or managed.
+
+Primary research modes: AI/ML/CV, Robotics, Graphics/Visual Computing, HCI/Technical HCI, and hybrids that need both technical and design/workflow evidence.
 
 ### 1. Install the `harness` command
 
@@ -73,7 +79,8 @@ Equivalent:
 This creates symlinks such as:
 
 ```text
-~/.codex/skills/paper-design  -> ./skills/paper-design
+~/.codex/skills/coresearch    -> ./skills/coresearch
+~/.codex/skills/research-design  -> ./skills/research-design
 ~/.codex/skills/research-loop -> ./skills/research-loop
 ```
 
@@ -283,10 +290,14 @@ So the intended setup is:
 
 ```bash
 harness status                         # show global/project/skill state
+harness inventory --include-plugins    # audit Codex/Claude skill overlap, preferences, legacy symlinks
 harness doctor --strict                # verify install health
 harness repair                         # relink skills, reinstall command, validate, strict doctor
+harness repair --surface both          # repair Codex + Claude skill links
 harness link                           # symlink user-scope skills to this repo
+harness link --surface both            # symlink to ~/.codex/skills and ~/.claude/skills
 harness install --scope user           # copy user-scope skills
+harness install --scope user --surface claude
 harness install --scope project --project-dir . --project-bridge
 harness self-install                   # install harness command into ~/.local/bin
 harness self-uninstall                 # remove installed harness command
@@ -322,9 +333,10 @@ It checks:
 - skill frontmatter and expected skill catalog;
 - OMX marker contracts in `templates/research/AGENTS.md`;
 - root `AGENTS.md` remains bundle-development guidance, not the installable research template;
-- `pdf-crawl` safety flags and dry-run behavior;
+- `research-pdfs` safety flags and dry-run behavior;
 - user copy install and bridge idempotency;
 - user symlink install for repo-auto-update;
+- no legacy shim aliases are installed;
 - `harness install` user/project wrapper behavior;
 - `harness link/status`;
 - `harness self-install/self-uninstall`;

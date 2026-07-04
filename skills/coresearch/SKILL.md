@@ -44,7 +44,7 @@ Use this as the first-stop router for research work. Keep it small: classify sta
 - Read [research-rules.md](references/research-rules.md) when screening importance, contribution type, field object, or claim-evidence fit.
 - Read [artifact-companions.md](references/artifact-companions.md) when `.docx`, `.pdf`, `.pptx`, `.xlsx`, frontend, or web artifact work appears.
 - Read [research-integrity.md](references/research-integrity.md) for claims, citations, evidence, or confidential material.
-- Read [omx-pony-caveman.md](references/omx-pony-caveman.md) when `$autoresearch`, `$ponytail`, `$caveman`, `$team`, or `$ultragoal` affects execution.
+- Read [omx-pony-caveman.md](references/omx-pony-caveman.md) when `$autoresearch`, `$ponytail`, `$caveman`, `$team`, `$ultragoal`, or native subagents affect execution.
 - Read [skill-catalog.md](references/skill-catalog.md) when auditing overlaps or installed companion skills.
 
 ## Default routes

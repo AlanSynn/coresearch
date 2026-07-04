@@ -8,12 +8,16 @@
 
 Coresearch uses canonical `coresearch`, `research-*`, and `pptx` names only. Old `paper-*`, `claim-check`, `pdf-crawl`, `rebuttal-plan`, and `research-guidelines` shims are intentionally not managed by this harness.
 
+## Native agent roles
+
+Skill names are not native `agent_type` names. When delegating, use installed OMX roles (`explore`, `researcher`, `executor`, `test-engineer`, `verifier`, `critic`, `code-reviewer`, `writer`, etc.) and pass the Coresearch stage/skill/field/evidence context in the handoff. `worker` is team-runtime-only, not a generic route.
+
 ## Companion routes, not owned by default
 
 - `academic-ppt`: source-faithful academic `.pptx` generation from LaTeX/PDF/equations; optional route from `research-slides` when source fidelity matters more than general PowerPoint mechanics.
 - `docx`, `pdf`, `xlsx`: Claude document skills; use only when those file formats are explicit input/output.
 - Claude `pptx`: preferred external mechanics engine when exact Claude PowerPoint behavior is desired; Coresearch `pptx` prepares the academic brief and validates claims/QA.
-- `web-artifacts-builder`, `frontend-design`: web demo/artifact polish; route only when research output needs interactive/demo UI.
+- `web-artifacts-builder`, `frontend-design`, `frontend-skill`: web demo/artifact polish; route only when research output needs interactive/demo UI.
 - `autoresearch`, `autoresearch-goal`: OMX validator-gated loops.
 - `best-practice-research`: upstream docs/practice evidence.
 - `caveman`: terse communication mode.

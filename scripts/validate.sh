@@ -31,6 +31,8 @@ bash -n bin/harness
 bash -n harness
 pass "shell scripts parse"
 
+BRIDGE_HANDOFF_LINE="For native subagents or team lanes, use installed OMX agent roles and pass Coresearch stage, skill, field, evidence, scope, validation, confidentiality context, and active Ponytail/Caveman mode when relevant."
+
 python3 - <<'PY'
 from pathlib import Path
 import json
@@ -133,6 +135,7 @@ echo "GLOBAL HEADER" > "$user_home/AGENTS.md"
 [[ -f "$user_home/skills/research-pdfs/crawler.py" ]] || fail "user install missing crawler"
 grep -q 'GLOBAL HEADER' "$user_home/AGENTS.md" || fail "existing global AGENTS content was not preserved"
 grep -q 'RESEARCH_AGENT_SKILLS:START' "$user_home/AGENTS.md" || fail "user bridge missing"
+grep -qF "$BRIDGE_HANDOFF_LINE" "$user_home/AGENTS.md" || fail "user bridge missing subagent handoff line"
 count="$(grep -c 'RESEARCH_AGENT_SKILLS:START' "$user_home/AGENTS.md")"
 [[ "$count" == "1" ]] || fail "user bridge count after first install: $count"
 ./scripts/install.sh --scope user --codex-home "$user_home" --global-bridge >/tmp/research-skills-install-user-2.txt
@@ -234,6 +237,7 @@ grep -q 'Dry run only' /tmp/research-skills-harness-global-dry.txt || fail "harn
 ! grep -q 'RESEARCH_AGENT_SKILLS:START' "$global_home/AGENTS.md" || fail "harness global dry-run wrote file"
 ./harness global --codex-home "$global_home" -y >/tmp/research-skills-harness-global-apply.txt
 grep -q 'RESEARCH_AGENT_SKILLS:START' "$global_home/AGENTS.md" || fail "harness global apply missing bridge"
+grep -qF "$BRIDGE_HANDOFF_LINE" "$global_home/AGENTS.md" || fail "harness global bridge missing subagent handoff line"
 ./harness global --codex-home "$global_home" --remove -y >/tmp/research-skills-harness-global-remove.txt
 ! grep -q 'RESEARCH_AGENT_SKILLS:START' "$global_home/AGENTS.md" || fail "harness global remove left bridge"
 pass "harness global bridge dry/apply/remove"
@@ -284,6 +288,7 @@ grep -q 'Dry run only' /tmp/research-skills-harness-init-dry.txt || fail "harnes
 [[ ! -f "$harness_project/AGENTS.md" ]] || fail "harness init dry-run wrote AGENTS.md"
 ./harness init "$harness_project" --bridge -y >/tmp/research-skills-harness-init-apply.txt
 grep -q 'RESEARCH_AGENT_SKILLS:START' "$harness_project/AGENTS.md" || fail "harness init bridge apply missing bridge"
+grep -qF "$BRIDGE_HANDOFF_LINE" "$harness_project/AGENTS.md" || fail "harness init bridge missing subagent handoff line"
 ./harness init --target "$harness_project" --mode bridge --apply >/tmp/research-skills-harness-init-apply-2.txt
 count="$(grep -c 'RESEARCH_AGENT_SKILLS:START' "$harness_project/AGENTS.md")"
 [[ "$count" == "1" ]] || fail "harness bridge duplicated: $count"
@@ -292,6 +297,7 @@ target_override_b="$(mktemp -d)"
 ./harness init "$target_override_a" --target "$target_override_b" --bridge -y >/tmp/research-skills-harness-target-override.txt
 [[ ! -f "$target_override_a/AGENTS.md" ]] || fail "--target did not override positional target"
 grep -q 'RESEARCH_AGENT_SKILLS:START' "$target_override_b/AGENTS.md" || fail "--target override did not write chosen target"
+grep -qF "$BRIDGE_HANDOFF_LINE" "$target_override_b/AGENTS.md" || fail "--target override bridge missing subagent handoff line"
 pass "harness init shorthand/target-override bridge dry/apply/idempotent"
 
 noninteractive_init="$(mktemp -d)"
@@ -336,12 +342,14 @@ project_dir="$(mktemp -d)"
 [[ ! -e "$project_dir/.codex/skills/paper-design" && ! -L "$project_dir/.codex/skills/paper-design" ]] || fail "project symlink install unexpectedly kept paper-design alias"
 [[ -L "$project_dir/.codex/skills/research-loop" ]] || fail "project symlink install missing research-loop symlink"
 grep -q 'RESEARCH_AGENT_SKILLS:START' "$project_dir/AGENTS.md" || fail "project bridge missing"
+grep -qF "$BRIDGE_HANDOFF_LINE" "$project_dir/AGENTS.md" || fail "project bridge missing subagent handoff line"
 pass "project install symlink mode and bridge"
 
 harness_project_install="$(mktemp -d)"
 ./harness install --scope project --project-dir "$harness_project_install" --project-bridge >/tmp/research-skills-harness-install-project.txt
 [[ -f "$harness_project_install/.codex/skills/research-loop/SKILL.md" ]] || fail "harness install project missing research-loop"
 grep -q 'RESEARCH_AGENT_SKILLS:START' "$harness_project_install/AGENTS.md" || fail "harness install project bridge missing"
+grep -qF "$BRIDGE_HANDOFF_LINE" "$harness_project_install/AGENTS.md" || fail "harness install project bridge missing subagent handoff line"
 pass "harness install project copy mode and bridge"
 
 project_full="$(mktemp -d)"

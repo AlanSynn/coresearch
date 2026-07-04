@@ -43,7 +43,7 @@ Build and modify research code so paper claims remain reproducible and inspectab
 
 ## Workflow
 
-Use `omx explore` first for simple read-only repo lookups when OMX exposes it. Use `$team` only for approved parallel work with disjoint write scopes; otherwise keep implementation in the current session and verify locally.
+Use normal repo inspection or a native `explore` subagent for simple read-only repo lookups; use `omx explore` only as a compatibility fallback when explicitly available and useful. Use `$team` only for approved parallel work with disjoint write scopes; otherwise keep implementation in the current session and verify locally.
 
 1. Identify the claim, metric, dataset, and expected artifact.
 2. Inspect existing code and tests before editing.

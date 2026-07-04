@@ -47,6 +47,7 @@ def bridge_block() -> str:
     role_skills = ", ".join(f"`{name}`" for name in owned_skill_names() if name != "coresearch")
     return f"""{START}
 Coresearch skills are installed. For broad academic research tasks, load `coresearch` first; for narrow tasks, load the smallest matching skill: {role_skills}.
+For native subagents or team lanes, use installed OMX agent roles and pass Coresearch stage, skill, field, evidence, scope, validation, confidentiality context, and active Ponytail/Caveman mode when relevant.
 Keep research work cumulative in the current thread. Do not create `.agents/` chats or paper-state forests. Use `.omx/` only for explicit OMX workflows, hooks, recovery, or checkpointing. Verify current venue rules and citations from official/primary sources when exactness matters.
 {END}
 """

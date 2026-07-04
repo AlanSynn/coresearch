@@ -1,6 +1,6 @@
 # OMX Research Agent System
 
-Lean workspace contract for doing research work with Codex + oh-my-codex (OMX). The root prompt sets research integrity, routing, and verification rules; complete workflows live in `skills/*/SKILL.md` and should be loaded only when needed.
+Lean workspace contract for doing research work with Codex + oh-my-codex (OMX). The root prompt sets research integrity, routing, and verification rules; complete workflows should be loaded by canonical skill name from the active Codex skill roots (`~/.codex/skills` or project `.codex/skills`) only when needed.
 
 Do not create separate `.agents/` chats, agent mailboxes, or paper-state forests for ordinary research tasks. Keep the active conversation cumulative. Use OMX runtime state under `.omx/` only when an explicit OMX workflow is active/requested or when OMX hooks manage it.
 
@@ -47,14 +47,21 @@ Success means the work is clearer, more rigorous, more situated, more reproducib
 ### 1. Choose the lightest lane
 
 - **Direct research answer:** answer in chat using `coresearch` behavior.
-- **Paper workflow:** load the smallest complete skill from `skills/`.
-- **Repository lookup:** if OMX `omx explore` is available and the task is a simple file/symbol/pattern/relationship lookup, use it first; otherwise inspect normally.
+- **Paper workflow:** load the smallest complete installed skill by canonical name.
+- **Repository lookup:** use normal repo inspection or a native `explore` subagent for simple file/symbol/pattern questions; use `omx explore` only as a compatibility fallback when explicitly available and useful.
 - **External docs / current rules / literature:** use official, primary, or source-backed references. Browse/search when current or exact accuracy matters.
 - **Unclear scope:** use `$deep-interview` or ask one concise question.
 - **Planning with tradeoffs:** use `$ralplan` or `research-design` depending on whether an executable plan or a paper design contract is needed.
 - **Validator-gated autonomous research:** use `research-loop`; if running OMX, prefer `$deep-interview --autoresearch` → `$autoresearch`.
 - **Parallel execution:** use `$team` or native subagents only when explicitly requested or when parallelism materially improves quality/speed/safety. Keep write scopes disjoint.
 - **Persistent single-owner completion:** use `$ralph` only for a clear, approved, verifiable loop.
+
+
+### Native subagent handoff
+
+When using native subagents, set a specific OMX `agent_type` and pass enough Coresearch context. A fresh subagent may not know the loaded skill unless it is given the skill item, forked context, or a compact handoff. Include: primary `research-*`/`pptx` skill, field mode, claim/evidence target, confidentiality limits, owned files or read-only scope, validation expected, no-fabrication rule, and active Ponytail/Caveman mode plus level when those modes affect output. Do not use `worker` outside active `$team`/`$swarm`.
+
+Default role mapping: repo lookup → `explore`; official docs/current venue/literature metadata → `researcher`; code edits → `executor`; test/reproducibility → `test-engineer`; claim/completion audit → `verifier`; adversarial paper/deck review → `critic`/`code-reviewer`; prose help → `writer`.
 
 ### 2. Skill routing
 

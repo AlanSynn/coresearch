@@ -1,6 +1,6 @@
 ---
 name: research-loop
-description: OMX-compatible autonomous research mission design for AI, graphics, HCI, or technical research projects. Use when the user wants to start, steer, or audit an autonomous research loop, define hypotheses and experiments, create validator-gated success criteria, or hand off to OMX autoresearch without creating ad-hoc .agents state.
+description: Autonomous research mission and validator-gated loop design for AI, graphics, HCI, or technical research projects. Use when the user wants to start, steer, or audit an autonomous research loop, define hypotheses and experiments, or create artifact validators, sandbox limits, and stop conditions. Optionally hands off execution to `$autoresearch` when an OMX install is present; does not create ad-hoc `.agents/` state.
 ---
 
 # Research Loop
@@ -14,7 +14,7 @@ execution to `$autoresearch`.
 
 Start, steer, or audit autonomous research missions; convert hypotheses into
 artifacts, validators, sandbox limits, stop conditions, OMX handoff contracts;
-default to chat-only execution; if OMX is installed, `$autoresearch`, `$ralplan`, and `$team` are optional executors.
+default to chat-only execution; if OMX is installed, `$autoresearch`, `$ralplan`, and `$team` are optional OMX executors.
 Use when: starting a multi-hypothesis project; turning an idea into experiments
 and stop conditions; creating an OMX mission after `$deep-interview
 --autoresearch`; auditing an existing loop for weak validators, unsafe
@@ -65,16 +65,18 @@ Research Mission Contract:
 
 ## State & Handoff
 
-State lives in chat, or in `.omx/` only when an OMX workflow is active or
-requested. Do not create `.agents/` chats or mailboxes. Do not create
-`.omx/specs/...` unless the user asks or an OMX autoresearch workflow is
-invoked — then prefer `.omx/specs/autoresearch-{slug}/mission.md`,
-`sandbox.md`, and `result.json` as the durable contract. Keep validators
-executable or inspectable. In a multi-skill run, seed
-`hypothesis_state.candidates` (each with a falsifier) to the orchestrator
-ledger (state-ledger.md) so research-causal can extend them; standalone, the
-mission contract above is enough. Next: `$deep-interview --autoresearch` /
-`$autoresearch` (OMX runtime) / `research-design` (scope narrows to a paper) /
-`research-engineer` (single experiment).
+Canonical Coresearch state is the orchestrator `ledger.yaml`
+(state-ledger.md); skills never write state inside their own directory.
+Otherwise state lives in chat, or in `.omx/` only when an OMX workflow is
+active or requested. Do not create `.agents/` chats or mailboxes. Write an OMX
+`.omx/specs/autoresearch-{slug}/mission.md`, `sandbox.md`, and `result.json`
+only when an OMX autoresearch workflow is invoked or the user asks — those are
+the OMX runtime's mirror of this mission contract, not the canonical
+Coresearch state. Keep validators executable or inspectable. In a multi-skill
+run, seed `hypothesis_state.candidates` (each with a falsifier) to the ledger
+so research-causal can extend them; standalone, the mission contract above is
+enough. Next: `$autoresearch` (OMX runtime, only when installed) /
+`research-design` (scope narrows to a paper) / `research-engineer` (single
+experiment).
 
 Re-entry: return to `coresearch` to re-route the next stage.

@@ -34,7 +34,7 @@ Coresearch skills complete standalone. These OMX lanes are optional acceleration
 
 - `$autoresearch` / `$deep-interview --autoresearch`: validator-gated autonomous loop execution after `research-loop` designs the mission.
 - `$ralplan`: executable code/system plan with tradeoffs.
-- `$team` / `$swarm` / `$ultragoal`: parallel implementation with durable checkpoints.
+- `$team` / `$ultragoal`: parallel implementation with durable checkpoints. (`$swarm` is deprecated upstream; prefer `$team`.)
 - `$ralph`: persistent single-owner completion for an approved loop.
 - `$best-practice-research`: upstream docs/practice lookup.
 - `$ultraqa`: hostile QA after implementation.

@@ -670,8 +670,17 @@ def classify_skill(name: str, surface: str, manifest: dict, skill_dir: Path) -> 
         if ".orchestra" in target:
             return "legacy-orchestra"
         return "non-skill"
+    # Ownership oracle: the per-skill _coresearch marker is authoritative (hard
+    # provenance, survives copy + symlink install); the manifest owned[] set is a
+    # migration bridge; a Coresearch-family name with neither is surfaced as
+    # owned-unmarked (diagnostic, not silent). classify_skill answers "is this
+    # owned?" off the filesystem, so manifest is metadata, not the sole oracle.
+    if (skill_dir / "_coresearch").exists():
+        return "plugin-overlap" if plugin_surface else "owned"
     if name in owned:
         return "plugin-overlap" if plugin_surface else "owned"
+    if name.startswith(("coresearch", "research-")):
+        return "plugin-overlap" if plugin_surface else "owned-unmarked"
     if name in companions:
         return "companion"
     if name in preferences or name.startswith(("caveman", "ponytail")) or name == "cavecrew":

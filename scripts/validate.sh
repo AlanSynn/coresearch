@@ -87,6 +87,7 @@ skill_manifest = json.loads(Path('skills/manifest.json').read_text())
 expected = {item['name'] for item in skill_manifest['owned']}
 assert 'coresearch' in expected
 assert all(Path('skills', name, 'SKILL.md').exists() for name in expected)
+assert all((Path('skills', name) / '_coresearch').exists() for name in expected), 'owned skill missing _coresearch ownership marker'
 assert 'aliases' not in skill_manifest
 assert {item['name'] for item in skill_manifest.get('companions', [])}
 assert {'caveman', 'ponytail'} <= set(skill_manifest.get('preferences', []))

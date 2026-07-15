@@ -79,3 +79,5 @@ reproducibility report. Next: `research-design` (paper argument) /
 `research-write` (prose). Stop when the artifact is implemented, validation has
 run or a blocker is explicit, and the user can reproduce the result from the
 reported command.
+
+Re-entry: return to `coresearch` to re-route the next stage.

@@ -85,3 +85,4 @@ Visual: [Figure/table/diagram]
 ## State & Handoff
 
 No ledger by default; the Research Talk Plan is the handoff artifact. Next: Claude `pptx` companion for `.pptx` build/render/QA; `academic-ppt` for paper-faithful LaTeX/PDF; Beamer — clean academic theme, semantic colors, dense equations only if the audience needs them, speaker notes as comments if requested, compile and report the command when files are generated.
+Re-entry: return to `coresearch` to re-route the next stage.

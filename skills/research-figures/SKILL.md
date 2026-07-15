@@ -73,3 +73,5 @@ State: plan marked `planned`; Missing Assets are build blockers. Next: plotting
 or repo-native implementation once approved; research-slides (deck structure);
 research-audit (claim↔figure alignment). Artifacts: Figure Plan md above.
 Carry forward Missing Assets and Risks as warnings.
+
+Re-entry: return to `coresearch` to re-route the next stage.

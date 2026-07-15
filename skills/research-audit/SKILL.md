@@ -57,3 +57,5 @@ State: ledger `source_state=audited`; unsupported claims to
 survived) / research-adversary (chain bias) / research-review (venue-fit) /
 research-gap (if load-bearing paper fails, the gap changes). Artifacts: audit md
 + revised-claim block.
+
+Re-entry: return to `coresearch` to re-route the next stage.

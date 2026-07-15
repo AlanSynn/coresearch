@@ -93,3 +93,5 @@ State: rewritten text carries inline diagnostics; softened/scoped claims flagged
 for author confirmation; evidence-still-needed tracked. Next: research-proofread
 (typo-only pass) / research-review (venue-fit + scoring) / research-audit
 (softened claim needs methodology backing). Artifacts: section md + diagnostics.
+
+Re-entry: return to `coresearch` to re-route the next stage.

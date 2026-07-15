@@ -83,3 +83,5 @@ polish). Carry forward variance and unanswered author-questions as warnings. In
 a multi-skill run, also seed `quality_state` (unsupported_claims /
 missing_counterevidence / unresolved_methodology_issues) from the score-moving
 gaps (state-ledger.md); standalone, the review above is enough.
+
+Re-entry: return to `coresearch` to re-route the next stage.

@@ -33,3 +33,5 @@ Pick one primary skill.
 - `$ultraqa`: hostile QA after implementation when e2e risk matters.
 
 Do not use `$autoresearch` for ordinary planning lookup. Feed its approved artifact back into `$ralplan` when architecture follows.
+
+On terminal, every OMX lane re-enters `coresearch` to route the next research stage; lanes are executors, not routers (see omx-pony-caveman.md §Re-entry to coresearch).

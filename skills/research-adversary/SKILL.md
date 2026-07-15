@@ -65,3 +65,5 @@ speculative)? what would a skeptic attack first?
 State: ledger `quality_state.{missing_counterevidence,unsupported_claims}`;
 downgrade affected `claim_state`. Next: back to the synthesis skill that produced
 the claim (with Required Corrections) / research-audit (weak load-bearing paper). Artifacts: adversary-review.md.
+
+Re-entry: return to `coresearch` to re-route the next stage.

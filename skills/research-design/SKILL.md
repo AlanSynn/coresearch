@@ -69,3 +69,5 @@ central artifact is impossible to infer; otherwise state assumptions and
 proceed. Next: executable implementation plan → `$ralplan` (OMX) or a native
 executor / chat-only plan if OMX is absent; autonomous experiment steering →
 `research-loop` / `$autoresearch` (OMX) after the contract is clear.
+
+Re-entry: return to `coresearch` to re-route the next stage.

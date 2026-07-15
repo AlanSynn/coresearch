@@ -18,6 +18,18 @@ Use this when the user starts or re-scopes research.
 
 If several stages apply, start at the earliest blocked stage. Do not jump to prose before claim/evidence is clear.
 
+## Analytical stages (router-owned)
+
+These reasoning stages are owned by the Coresearch router and route via `reasoning-skills.md`; each maps to one skill.
+
+| Stage | Question | Default route |
+|---|---|---|
+| Gap | What is the unsolved problem? | `research-gap` |
+| Dialectic | Where do claims conflict? | `research-dialectic` |
+| Causal | What causal mechanism holds? | `research-causal` |
+| Audit | Is a load-bearing paper sound? | `research-audit` |
+| Adversary | What counter-evidence survives? | `research-adversary` |
+
 ## Field-mode prompt
 
 When starting research, classify the work before routing:

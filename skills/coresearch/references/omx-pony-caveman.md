@@ -48,3 +48,13 @@ Default native `agent_type` mappings (not `$skill` routes):
 ## Team / Ultragoal
 
 Use Team for parallel lanes with disjoint write scopes. Use Ultragoal as durable ledger/checkpoint owner. Ralph only when persistent single-owner verification is explicitly selected.
+
+## Re-entry to coresearch
+
+OMX lanes (`$autoresearch`, `$ralplan`, `$team`, `$ultragoal`) and native
+subagents are executors, not routers. On terminal — or when a research stage
+follows their output — re-enter `coresearch` to re-classify and route the next
+stage. Example: `$autoresearch` terminal → `coresearch` → `research-write`
+(write-up) or `research-verify` (result claims). Do not chain a research skill
+from inside the lane. Lane results land in the canonical `ledger.yaml`
+(state-ledger.md); downstream skills read them there, not from a guessed OMX path.

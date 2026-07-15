@@ -164,3 +164,7 @@ research-verify (one-citation fact check) / research-design (contribution
 planning). Artifacts: in-chat literature map, optional roadmap `.md` + `pdf/`
 when a crawl was run. Carry forward not-found and partially-verified papers as
 manual follow-ups.
+
+In a multi-skill run, also write `source_state` per paper to the orchestrator ledger (state-ledger.md), mapping verification_status → state (PDF VERIFIED / FULL TEXT VERIFIED → fully_read; METADATA VERIFIED → screened; PARTIALLY VERIFIED → retrieved; NOT FOUND → missing).
+
+Re-entry: return to `coresearch` to re-route the next stage.

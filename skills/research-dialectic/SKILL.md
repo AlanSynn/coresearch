@@ -60,3 +60,5 @@ State: ledger `claim_state` for Dominant/Counter/Synthesis; rejected reconciliat
 to `quality_state.unresolved_methodology_issues`. Next: research-causal (bridge →
 model) / research-audit (test load-bearing papers).
 Artifacts: dialectic.md + evidence updates.
+
+Re-entry: return to `coresearch` to re-route the next stage.

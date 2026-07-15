@@ -41,10 +41,13 @@ stop_conditions: [string]
 - Read the ledger first. If `claim_state` already has a rejected direction for
   the same claim with the same evidence, do not regenerate — surface it.
 - Update only the keys your skill touched. Never blanket-overwrite.
-- On finish: set `active_skill` null, append to `completed_skills`, push
-  concrete `next_actions`, note any new `stop_conditions`.
-- A skill that cannot proceed writes itself to `blocked_by` with a reason rather
-  than emitting a fabricated partial result.
+- On finish: set `active_skill` null; add the skill to `completed_skills` only if
+  absent; replace (do not duplicate) any `next_actions` entry your skill already
+  wrote, else append; merge `stop_conditions` without duplicating. Re-entry and
+  pipeline loops may call finish more than once — keep these writes idempotent.
+- A skill that cannot proceed writes itself to `blocked_by` with a reason
+  (replacing any prior entry for the same skill) rather than emitting a
+  fabricated partial result.
 
 ## Mapping from skill vocabularies
 

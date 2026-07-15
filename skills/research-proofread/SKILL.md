@@ -66,3 +66,5 @@ Edit Readiness flagging auto-apply vs author-decision items. Next: research-writ
 (structural rewrites surfaced as "author decision") / research-review
 (acceptance risk) / submission. Artifacts: proofreading report only — no claims,
 citations, or results are added by this pass.
+
+Re-entry: return to `coresearch` to re-route the next stage.

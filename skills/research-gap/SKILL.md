@@ -74,3 +74,5 @@ of a falsified gap without new evidence. Next: research-dialectic (active
 disagreement) / research-causal (mechanism) / research-audit (load-bearing
 papers). Artifacts: gap-report.md + evidence/*.yaml. Carry forward coverage blind
 spots as warnings.
+
+Re-entry: return to `coresearch` to re-route the next stage.

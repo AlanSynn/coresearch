@@ -85,3 +85,7 @@ PASS/FAIL/PARTIAL evidence; Residual Risk is the hand-forward. In a multi-skill
 run, also write `claim_state.{supported|contradicted|unresolved|rejected}` per
 finding to the orchestrator ledger (state-ledger.md); standalone, the Claim
 Check is enough.
+
+Next: research-rebuttal (verifying against reviewer concerns) / research-write (verifying draft text) / research-audit (a load-bearing claim failed).
+
+Re-entry: return to `coresearch` to re-route the next stage.

@@ -73,3 +73,5 @@ State: ledger codebook + themes written; unsupported design claims to
 research-adversary (challenge themes) / research-dialectic (conflict with
 literature). Artifacts: codebook.yaml +
 themes.md.
+
+Re-entry: return to `coresearch` to re-route the next stage.

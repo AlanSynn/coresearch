@@ -75,3 +75,5 @@ Planning/handoff artifact only; no experiment execution. Next: research-engineer
 (feasible additions identified) / research-write (prose polish) / research-audit
 (load-bearing weakness needs verification). Carry Prioritized Response Bullets +
 Additions if Allowed forward.
+
+Re-entry: return to `coresearch` to re-route the next stage.

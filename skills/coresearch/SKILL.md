@@ -5,7 +5,7 @@ description: Central Coresearch router for Alan's academic research, paper, lite
 
 # Coresearch
 
-Use this as the first-stop router for research work. Keep it small: classify stage, load one matching role skill, then stop routing.
+Use this as the first-stop router for research work. Keep it small: classify stage, load one matching role skill, run it, then return here to re-route the next stage — do not chain skill-to-skill.
 
 ## Good for
 
@@ -18,7 +18,7 @@ Use this as the first-stop router for research work. Keep it small: classify sta
 
 - Pick one primary research stage and one primary skill.
 - Select a field mode when design, writing, review, figures, or engineering quality depends on AI / Robotics / Graphics / HCI norms.
-- Keep `coresearch` as a central triage unit: route, load only needed references, then hand off.
+- Keep `coresearch` as a central triage unit: route, load only needed references, hand off, then re-enter on the next stage.
 - Preserve evidence discipline: separate fact, inference, recommendation, and unknown.
 
 ## Not for
@@ -74,6 +74,16 @@ Use this as the first-stop router for research work. Keep it small: classify sta
 - Workflow stall diagnosis (stalled, repeating, weak synthesis) → read [reasoning-skills.md](references/reasoning-skills.md) §Stall diagnosis; routes back into the skills above.
 - DOCX/PDF/PPTX/XLSX/frontend/web mechanics → keep research claim owner in Coresearch, then route to companion skills from [artifact-companions.md](references/artifact-companions.md) when installed.
 - If two routes match: fact-check/number/citation → `research-verify` over `research-audit`; 'review' = venue score → `research-review`, methodology soundness → `research-audit`; experiment PLAN → `research-design`, hypotheses/validators → `research-loop`, implement code → `research-engineer`.
+
+## Re-entry
+
+`coresearch` is a re-entry hub, not one-shot triage. After a role skill emits its
+output and any ledger keys (state-ledger.md), return here to re-classify the
+stage and route the next skill — do not chain skill-to-skill on `Next:` hints
+alone. Role-skill `Next:` lines are conveniences; the `## Default routes` map
+above is canonical and complete. OMX lanes (`$autoresearch`, `$ralplan`,
+`$team`) and native subagents: on terminal, re-enter `coresearch` to route the
+follow-up stage (write-up, verify, review); do not chain from inside the lane.
 
 ## Guardrails
 

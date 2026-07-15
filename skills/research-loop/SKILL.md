@@ -75,3 +75,5 @@ ledger (state-ledger.md) so research-causal can extend them; standalone, the
 mission contract above is enough. Next: `$deep-interview --autoresearch` /
 `$autoresearch` (OMX runtime) / `research-design` (scope narrows to a paper) /
 `research-engineer` (single experiment).
+
+Re-entry: return to `coresearch` to re-route the next stage.

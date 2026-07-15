@@ -61,3 +61,5 @@ edges downgraded causal→correlational logged. Next: research-audit (test a
 load-bearing causal claim) / research-adversary (challenge strongest hypothesis)
 / research-gap (if an
 unidentifiable hypothesis is itself the gap). Artifacts: causal-map.md.
+
+Re-entry: return to `coresearch` to re-route the next stage.

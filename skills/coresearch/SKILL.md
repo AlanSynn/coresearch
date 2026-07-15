@@ -46,7 +46,7 @@ Use this as the first-stop router for research work. Keep it small: classify sta
 - Read [research-contract.md](references/research-contract.md) at run start to capture the orchestrator input contract (topic, intended contribution, independent-group floor, output path).
 - Read [state-ledger.md](references/state-ledger.md) when orchestrating a multi-skill run or maintaining cross-skill state (it is the canonical state; OMX `.omx/specs` and `$ultragoal` only mirror it).
 - Read [artifact-companions.md](references/artifact-companions.md) when `.docx`, `.pdf`, `.pptx`, `.xlsx`, frontend, or web artifact work appears.
-- Read [research-integrity.md](references/research-integrity.md) for claims, citations, evidence, or confidential material.
+- Read [evidence-grounding.md](references/evidence-grounding.md) for claims, citations, evidence, the integrity floor, or confidential material.
 - Read [omx-pony-caveman.md](references/omx-pony-caveman.md) when `$autoresearch`, `$ponytail`, `$caveman`, `$team`, `$ultragoal`, or native subagents affect execution.
 - Read [skill-catalog.md](references/skill-catalog.md) when auditing overlaps or installed companion skills.
 

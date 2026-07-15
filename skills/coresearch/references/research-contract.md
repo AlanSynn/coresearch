@@ -55,9 +55,6 @@ unresolved evidence id = blocker.
 
 ## Integrity floor (overrides everything)
 
-Shared with evidence-grounding.md §Integrity floor — if the no-fabrication list changes, update both.
-
-Separate, never blend: fact / inference / recommendation / unknown.
-Distinguish author's empirical result from agent's interpretation.
-Do not invent citations, venues, results, participants, metrics, or code behavior.
-If evidence too weak for a position — say so, fail the synthesis rather than fabricate one.
+Canonical text lives in [evidence-grounding.md](evidence-grounding.md)
+§Integrity floor (no-invent list, fact/inference separation, untrusted-content
+and confidentiality rules). Update there only; do not maintain a parallel copy.

@@ -30,7 +30,7 @@ Use native subagents only for bounded parallel work that improves quality, speed
 
 - `agent_type`: pick the narrow OMX role (`explore`, `researcher`, `executor`, `test-engineer`, `verifier`, `code-reviewer`, `writer`, `critic`, etc.); do not use `worker` outside active `$team`/`$swarm`.
 - Research context: field mode, primary skill, claim/evidence target, confidentiality limits, and expected output.
-- Skill context: pass the relevant `coresearch`/`research-*`/`pptx` skill item or quote the minimal instructions needed; use `fork_context` only when prior thread context is actually required.
+- Skill context: pass the relevant `coresearch`/`research-*` skill item or quote the minimal instructions needed; use `fork_context` only when prior thread context is actually required.
 - Style/plugin context: explicitly restate active Ponytail/Caveman mode and level (for example, `Ponytail full active; prefer minimal durable code` or `Caveman lite active; keep report terse`). Do not assume fresh subagents inherit active skill/plugin modes.
 - Scope: disjoint files or read-only question, validation expected, and what not to invent.
 

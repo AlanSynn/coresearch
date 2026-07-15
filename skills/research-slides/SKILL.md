@@ -3,68 +3,30 @@ name: research-slides
 description: Academic research presentation workflow. Use when the user asks for slides, a talk, a deck, Beamer, PowerPoint, keynote structure, conference presentation, thesis defense, interview talk, group meeting, or to convert a paper, abstract, results, or notes into a clear research presentation.
 ---
 
-# Research Slides
+# research-slides — Academic Research Presentation
 
-Create research talks that preserve the paper's evidence and contribution without overloading slides. Default output is a slide plan and slide text in chat. Generate `.tex`, `.pptx`, or files only when requested. In OMX workflows, treat the deck as a derived artifact from verified paper claims, not a new source of claims.
+Build research talks that preserve a paper's evidence and contribution without overloading slides — a derived artifact from verified claims, not a new source of claims. Default: slide plan + slide text in chat; `.tex`/`.pptx`/files only when requested.
 
-If the user asks for a finished `.pptx` deck, keep this skill responsible for research narrative, claim calibration, and slide structure, then route mechanics:
+## What & When
 
-- Prefer `pptx` when the priority is finished PowerPoint mechanics, Claude-style `.pptx` execution, template editing, visual polish, or robust PowerPoint QA.
-- Use `academic-ppt` when the priority is paper-faithful extraction from LaTeX/PDF, equation-heavy academic dossiers, or defense-style source fidelity.
-- For the best result, produce a compact claim-faithful slide brief here, then hand it to `pptx` for build/render/QA; Claude delegation follows `pptx`'s external delegation gate.
+Outlines, claim-titled slides, speaker notes, Beamer drafts, conference talks,
+thesis defenses, interviews, group meetings; paper claims/figures/evidence into an audience-specific narrative; a claim-faithful plan before `.pptx`. Not for: low-level PowerPoint mechanics by default; decorative slides without a narrative. Inputs: paper, abstract, notes, figures, results, venue, audience, length — if missing assume 5 min → 5–7 slides, 10–15 min → 8–14, 30 min → 18–25, defense → 35–55.
 
-## Good for
+## Procedure
 
-- Research talk outlines, slide titles as claims, speaker notes, Beamer drafts, conference talks, thesis defenses, interviews, and group meetings.
-- Converting paper claims, figures, and evidence into a clear audience-specific narrative.
-- Preparing a claim-faithful plan before `.pptx` generation.
+1. **Audience contract** — who is listening and what background they need.
+2. **Background** — minimum concepts needed for the argument.
+3. **Problem stakes** — why the field should care.
+4. **Tension/gap** — what existing approaches cannot explain, compute, support, or scale.
+5. **Key insight/thesis** — one sentence the talk proves.
+6. **Method/system/study logic** — how the work makes the thesis plausible.
+7. **Evidence sequence** — main result, comparisons, ablations, examples, studies, or failures.
+8. **Limitations and scope.**
+9. **Takeaway and future direction.**
 
-## Must do
+**Slide rules** — one claim per slide; takeaway in the title when possible; figures as evidence, not decoration; no paragraphs (keywords + speaker notes carry nuance); no unsupported claims or results; define terms before wielding them as arguments for interdisciplinary audiences.
 
-- Preserve paper claims and evidence; slides are derived artifacts, not new claims.
-- Use one claim per slide and put the takeaway in the title when possible.
-- Identify figures/assets needed and density risks.
-- Route finished `.pptx` mechanics to `pptx`; Claude handoff follows `pptx`'s external delegation gate. Use `academic-ppt` for paper-faithful/equation-heavy builds.
-
-## Not for
-
-- Low-level PowerPoint mechanics by default.
-- Decorative slide generation without a research narrative.
-- Inventing results, visuals, or claims to make slides look complete.
-
-## Inputs
-
-Use the paper, abstract, notes, figures, results, venue, audience, and talk length. If talk length is missing, assume:
-
-- 5 minutes: 5–7 slides;
-- 10–15 minutes: 8–14 slides;
-- 30 minutes: 18–25 slides;
-- defense: 35–55 slides depending on norms.
-
-## Academic presentation spine
-
-1. Audience contract: who is listening and what background they need.
-2. Background: minimum concepts needed for the argument.
-3. Problem stakes: why the field should care.
-4. Tension/gap: what existing approaches cannot explain, compute, support, or scale.
-5. Key insight/thesis: one sentence the talk proves.
-6. Method/system/study logic: how the work makes the thesis plausible.
-7. Evidence sequence: main result, comparisons, ablations, examples, studies, or failures.
-8. Limitations and scope.
-9. Takeaway and future direction.
-
-## Slide rules
-
-- One claim per slide.
-- Put the takeaway in the title when possible.
-- Use figures as evidence, not decoration.
-- Avoid paragraphs; use keywords and speaker notes for nuance.
-- Do not add unsupported claims or results.
-- For interdisciplinary audiences, define terms before using them as arguments.
-
-## Argument-first deck rules
-
-Default to academic persuasion, not a visual theme:
+**Argument-first deck rules** — default to academic persuasion, not a visual theme:
 
 - Background slides earn attention; they are not literature dumps.
 - Gap slides create tension; they explain why current options fail or remain incomplete.
@@ -75,9 +37,7 @@ Default to academic persuasion, not a visual theme:
 - Visual polish is subordinate to argument clarity: hierarchy, contrast, readable figures, and claim-title alignment matter more than motif.
 - Field tone changes evidence emphasis, not the spine: AI/Robotics/Graphics/HCI decks still need background → gap → thesis → method → evidence → limits → takeaway.
 
-## Finished `.pptx` QA handoff
-
-When `pptx` or another deck builder generates or edits a `.pptx`, require the checks below. If the builder is Claude/`ask-claude`, apply `pptx`'s external delegation gate first:
+**Finished `.pptx` mechanics** — this skill owns research narrative, claim calibration, and slide structure; route build/render/QA to the Claude `pptx` companion (`academic-ppt` for paper-faithful LaTeX/PDF/equation-heavy builds). Produce a compact claim-faithful brief here first. When a companion or builder generates/edits a `.pptx`, require the QA handoff:
 
 1. text extraction check for missing content, wrong order, typos, and placeholder residue;
 2. rendered slide images or thumbnails;
@@ -85,7 +45,7 @@ When `pptx` or another deck builder generates or edits a `.pptx`, require the ch
 4. at least one fix-and-verify cycle for affected slides;
 5. final statement of unresolved deck risks.
 
-## Output schema
+## Output
 
 ```markdown
 # Research Talk Plan
@@ -116,12 +76,12 @@ Visual: [Figure/table/diagram]
 - [Slide likely too dense]
 ```
 
-## Optional Beamer guidance
+## Reject when
 
-When generating LaTeX Beamer:
+- decorative slides with no research narrative, or inventing results/visuals/claims to look complete;
+- a slide carries an unsupported claim or result;
+- a finished `.pptx` is emitted without the QA handoff checks above.
 
-- keep a clean academic theme;
-- define colors semantically;
-- avoid dense equations unless the audience needs them;
-- include speaker notes as comments if requested;
-- compile and report the command if files are generated.
+## State & Handoff
+
+No ledger by default; the Research Talk Plan is the handoff artifact. Next: Claude `pptx` companion for `.pptx` build/render/QA; `academic-ppt` for paper-faithful LaTeX/PDF; Beamer — clean academic theme, semantic colors, dense equations only if the audience needs them, speaker notes as comments if requested, compile and report the command when files are generated.

@@ -40,6 +40,8 @@ REMOVED_SKILLS=(
   claim-check
   pdf-crawl
   research-guidelines
+  pptx
+  research-pdfs
 )
 
 usage() {
@@ -172,6 +174,8 @@ is_legacy_coresearch_copy() {
     claim-check) grep -q 'Factual verification and hallucination detection for research text' "$file" ;;
     pdf-crawl) grep -q 'Batch-download open-access PDFs for papers listed in a markdown research roadmap' "$file" ;;
     research-guidelines) grep -q 'Compact behavioral guidelines for research assistance' "$file" ;;
+    pptx) grep -q 'Coresearch-owned PowerPoint workflow' "$file" ;;
+    research-pdfs) grep -q 'Batch-download open-access PDFs for papers listed in a markdown research roadmap or paper list' "$file" ;;
     *) return 1 ;;
   esac
 }

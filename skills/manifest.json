@@ -23,6 +23,21 @@
       "group": "discovery"
     },
     {
+      "name": "research-gap",
+      "role": "gap",
+      "group": "discovery"
+    },
+    {
+      "name": "research-dialectic",
+      "role": "dialectic",
+      "group": "discovery"
+    },
+    {
+      "name": "research-causal",
+      "role": "causal",
+      "group": "discovery"
+    },
+    {
       "name": "research-engineer",
       "role": "engineering",
       "group": "build"
@@ -33,8 +48,8 @@
       "group": "evidence"
     },
     {
-      "name": "research-pdfs",
-      "role": "utility",
+      "name": "research-qualitative",
+      "role": "qualitative",
       "group": "evidence"
     },
     {
@@ -63,13 +78,18 @@
       "group": "output"
     },
     {
-      "name": "pptx",
-      "role": "powerpoint",
-      "group": "output"
-    },
-    {
       "name": "research-verify",
       "role": "verify",
+      "group": "verify"
+    },
+    {
+      "name": "research-audit",
+      "role": "audit",
+      "group": "verify"
+    },
+    {
+      "name": "research-adversary",
+      "role": "adversary",
       "group": "verify"
     }
   ],
@@ -79,12 +99,16 @@
       "reason": "source-faithful academic .pptx from LaTeX/PDF, equations, defense/source-fidelity workflows; optional companion when source fidelity matters more than general PowerPoint mechanics"
     },
     {
+      "name": "pptx",
+      "reason": "Claude PowerPoint mechanics engine; route finished .pptx build/render/QA here after research-slides defines the claim-faithful brief"
+    },
+    {
       "name": "docx",
       "reason": "Word document IO/editing; route only when .docx involved"
     },
     {
       "name": "pdf",
-      "reason": "generic PDF processing; keep research-pdfs focused on open-access literature fetch"
+      "reason": "generic PDF processing; open-access literature fetch lives in research-survey's crawler"
     },
     {
       "name": "xlsx",
@@ -127,6 +151,7 @@
     "ralph",
     "ultragoal",
     "team",
+    "swarm",
     "ultrawork",
     "ultraqa",
     "analyze",

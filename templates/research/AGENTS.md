@@ -59,7 +59,7 @@ Success means the work is clearer, more rigorous, more situated, more reproducib
 
 ### Native subagent handoff
 
-When using native subagents, set a specific OMX `agent_type` and pass enough Coresearch context. A fresh subagent may not know the loaded skill unless it is given the skill item, forked context, or a compact handoff. Include: primary `research-*`/`pptx` skill, field mode, claim/evidence target, confidentiality limits, owned files or read-only scope, validation expected, no-fabrication rule, and active Ponytail/Caveman mode plus level when those modes affect output. Do not use `worker` outside active `$team`/`$swarm`.
+When using native subagents, set a specific OMX `agent_type` and pass enough Coresearch context. A fresh subagent may not know the loaded skill unless it is given the skill item, forked context, or a compact handoff. Include: primary `research-*` skill (or `pptx` companion for finished decks), field mode, claim/evidence target, confidentiality limits, owned files or read-only scope, validation expected, no-fabrication rule, and active Ponytail/Caveman mode plus level when those modes affect output. Do not use `worker` outside active `$team`/`$swarm`.
 
 Default role mapping: repo lookup → `explore`; official docs/current venue/literature metadata → `researcher`; code edits → `executor`; test/reproducibility → `test-engineer`; claim/completion audit → `verifier`; adversarial paper/deck review → `critic`/`code-reviewer`; prose help → `writer`.
 
@@ -79,12 +79,10 @@ Canonical Coresearch skill names:
 - `research-engineer` — reproducible experiments, analyses, datasets, systems, benchmarks, and artifact release.
 - `research-loop` — OMX-compatible autonomous research mission and validator loop design.
 - `research-slides` — academic talk/deck structure and slide content.
-- `pptx` — owned PowerPoint creation/editing, academic argument spine checks, Claude `pptx` delegation, rendering, and QA for finished `.pptx` decks.
-- `research-pdfs` — optional open-access PDF download utility for verified markdown paper lists.
 
 If multiple skills apply, load the smallest set and state the order once.
 
-No shim aliases are managed by this harness. Use canonical `coresearch`, `research-*`, and `pptx` names.
+No shim aliases are managed by this harness. Use canonical `coresearch` and `research-*` names. PowerPoint mechanics route to the external Claude `pptx` companion, not an owned skill; open-access PDF batch download lives in `research-survey`'s in-skill crawler.
 
 ### 3. Research writing model
 
@@ -109,8 +107,8 @@ Default paper spine: motivation → difficulty/opportunity → prior-work stream
 Coresearch owns research claims and narrative. Format skills own format mechanics when installed:
 
 - `.docx` manuscripts/comments → route to `docx` only for file mechanics.
-- Generic PDFs → route to `pdf`; use `research-pdfs` only for open-access literature fetch.
-- Finished `.pptx` decks → plan with `research-slides`, then use owned `pptx` for PowerPoint mechanics, Claude `pptx` delegation, and render QA; use `academic-ppt` only for LaTeX/PDF/equation-heavy source fidelity.
+- Generic PDFs → route to `pdf`; use `research-survey`'s in-skill crawler for open-access literature fetch.
+- Finished `.pptx` decks → plan with `research-slides`, then use the Claude `pptx` companion for PowerPoint mechanics, rendering, and render QA; use `academic-ppt` only for LaTeX/PDF/equation-heavy source fidelity.
 - Workbooks/results sheets → route formula/format mechanics to `xlsx`; verify claims with `research-verify`.
 - Research demo UIs/web artifacts → use `research-engineer` for architecture, `frontend-design`/`frontend-skill`/`web-artifacts-builder` for UI/build/export when requested.
 

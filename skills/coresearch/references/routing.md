@@ -15,13 +15,13 @@ Pick one primary skill.
 - `research-slides`: talk/deck outline and slide text.
 - `research-engineer`: research code, experiments, datasets, benchmarks, artifact release.
 - `research-loop`: hypotheses, validators, sandbox, `$autoresearch` mission design.
-- `research-pdfs`: open-access PDF batch download from verified paper lists.
+- `research-survey` owns open-access PDF batch download via its in-skill crawler.
 
 ## Field and artifact companions
 
 - Field/tone uncertainty → read `field-modes.md`, then route to `research-design` or `research-write`.
 - Research importance / contribution object uncertainty → read `research-rules.md`, then route to `research-design`.
-- `.pptx` mechanics → use owned `pptx` after `research-slides` defines claims/narrative.
+- `.pptx` mechanics → route to the Claude `pptx` companion after `research-slides` defines claims/narrative.
 - `.docx`, generic `.pdf`, `.xlsx`, frontend, or web artifact mechanics → read `artifact-companions.md`; Coresearch owns claims, companion owns format mechanics.
 
 ## OMX lanes

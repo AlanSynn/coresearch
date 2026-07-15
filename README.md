@@ -34,7 +34,7 @@ This installs the Coresearch command plus user-level skill surfaces:
 It does **not** modify `${CODEX_HOME:-~/.codex}/AGENTS.md` unless you explicitly run `harness global -y`.
 Use `coresearch` as the broad research router; use the role skills directly for narrow tasks.
 
-Coresearch uses canonical names only: `coresearch`, `research-*` role skills, and owned `pptx` for PowerPoint mechanics plus Claude `pptx` delegation. No shim aliases are installed or managed.
+Coresearch uses canonical names only: `coresearch` and `research-*` role skills. PowerPoint mechanics route to the external Claude `pptx` companion (no owned `pptx` skill). No shim aliases are installed or managed.
 
 Primary research modes: AI/ML/CV, Robotics, Graphics/Visual Computing, HCI/Technical HCI, and hybrids that need both technical and design/workflow evidence.
 
@@ -336,7 +336,7 @@ It checks:
 - skill frontmatter and expected skill catalog;
 - OMX marker contracts in `templates/research/AGENTS.md`;
 - root `AGENTS.md` remains bundle-development guidance, not the installable research template;
-- `research-pdfs` safety flags and dry-run behavior;
+- research-survey crawler safety flags and dry-run behavior;
 - user copy install and bridge idempotency;
 - user symlink install for repo-auto-update;
 - no legacy shim aliases are installed;

@@ -253,6 +253,33 @@ def assert_no_broken_repo_symlinks() -> list[Path]:
     return broken
 
 
+def _install_skill_roots(codex: Path, claude: Path) -> list[Path]:
+    """Candidate installed skill surfaces scanned for broken symlinks.
+
+    Tolerant of absent directories; callers filter by existence. Shared by
+    broken_install_symlinks (the scan) and cmd_doctor (the report label) so
+    the scanned set and the reported set cannot drift apart.
+    """
+    agents = (Path.home() / ".agents").expanduser()
+    return [
+        codex / "skills",
+        claude / "skills",
+        agents / "skills",
+        agents,
+    ]
+
+
+def broken_install_symlinks(codex: Path, claude: Path) -> list[Path]:
+    broken: list[Path] = []
+    for root in _install_skill_roots(codex, claude):
+        if not root.is_dir():
+            continue
+        for entry in root.iterdir():
+            if entry.is_symlink() and not entry.exists():
+                broken.append(entry)
+    return broken
+
+
 def cmd_install(args: argparse.Namespace) -> int:
     script = ROOT / "scripts" / "install.sh"
     cmd = [str(script), "--scope", args.scope, "--surface", args.surface, "--mode", args.mode]
@@ -456,6 +483,36 @@ def skill_status(home: Path) -> list[str]:
                 rows.append(f"{name}: dir:BROKEN missing SKILL.md -> {dst}")
         else:
             rows.append(f"{name}: missing")
+    # Surface orphaned entries: skills present in the install target but no
+    # longer owned (e.g. pptx, research-pdfs after a trim). Lets `doctor`/`status`
+    # see stragglers that `prune_removed_skills` should clear. Only flag names that
+    # look Coresearch-origin so a user's own unrelated skills are left alone.
+    owned = set(SKILLS)
+    legacy_names = {
+        "coresearch", "pptx", "claim-check", "pdf-crawl", "rebuttal-plan",
+        "research-guidelines", "research-pdfs",
+        "paper-design", "paper-survey", "paper-figures", "paper-rewrite",
+        "paper-review", "paper-proofread",
+    }
+
+    def looks_coreskills(name: str) -> bool:
+        return name in legacy_names or name.startswith("research") or name.startswith("paper-")
+
+    skills_dir = home / "skills"
+    if skills_dir.is_dir():
+        for entry in sorted(skills_dir.iterdir()):
+            name = entry.name
+            if name in owned or not looks_coreskills(name):
+                continue
+            if entry.is_symlink():
+                try:
+                    target = entry.resolve(strict=False)
+                except OSError:
+                    target = Path(os.readlink(entry))
+                kind = "orphaned-coreskills-symlink" if str(target).startswith(str(ROOT)) else "legacy-symlink"
+                rows.append(f"{name}: {kind} -> {target}")
+            elif entry.is_dir() and (entry / "SKILL.md").exists():
+                rows.append(f"{name}: legacy-dir (old Coresearch copy?) -> {entry}")
     return rows
 
 
@@ -654,6 +711,16 @@ def cmd_doctor(args: argparse.Namespace) -> int:
             failures.append(f"broken repo symlink: {link}")
     else:
         print("PASS no broken symlinks in repo")
+
+    claude = claude_home()
+    scanned_install_roots = [r for r in _install_skill_roots(home, claude) if r.is_dir()]
+    broken_install_links = broken_install_symlinks(home, claude)
+    if broken_install_links:
+        for link in broken_install_links:
+            failures.append(f"broken install symlink: {link}")
+    else:
+        scanned = ", ".join(str(r) for r in scanned_install_roots) or "none present"
+        print(f"PASS no broken symlinks in install surfaces ({scanned})")
 
     command_path = shutil.which(args.command_name)
     if command_path:

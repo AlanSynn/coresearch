@@ -3,87 +3,66 @@ name: research-proofread
 description: Final line-level proofreading workflow for academic manuscripts and LaTeX papers. Use when the user asks to proofread, check grammar, polish wording, inspect LaTeX formatting, notation, citations-as-written, captions, tables, acronym consistency, or find small errors. Phase 1 reports issues only; edits files only after approval.
 ---
 
-# Research Proofread
+# research-proofread — Final Line-Level Pass
 
-Perform a final line-level pass. This skill is not a venue review and not a contribution critique; use `research-review` for acceptance risk and `research-write` for structural rewriting.
+Line-level grammar/LaTeX/notation pass, run only after contribution, evidence,
+and structure are settled. Not a venue review, not a contribution critique.
 
-## Good for
+## What & When
 
-- Final grammar, LaTeX, notation, acronym, caption, table, reference-as-written, and consistency checks.
-- Safe local polishing after contribution, evidence, and structure are already settled.
-- Read-only verifier passes before submission.
+Line-level proofreading of manuscripts and LaTeX papers. Use when: "proofread
+this", "check grammar", "polish wording", "inspect LaTeX", "notation/acronym/
+caption consistency", pre-submission read-only sweep. Scope is grammar/LaTeX/
+notation only — content is settled upstream. Not for: acceptance risk →
+research-review; reframing contributions or restructuring → research-write /
+research-design; adding citations, results, or claims → out of scope.
 
-## Must do
+## Procedure
 
-- Preserve technical meaning and author voice.
-- Report issue severity and proposed fix.
-- Keep Phase 1 read-only unless pasted text asks for direct corrected output.
-- Ask/require approval before editing files.
-
-## Not for
-
-- Reframing contributions or changing paper structure; use `research-design` or `research-write`.
-- Acceptance scoring; use `research-review`.
-- Adding new citations, results, or claims.
-
-## Default policy
-
-- Phase 1 is read-only: report issues without editing files.
-- In OMX/team contexts, proofreading is a final verifier pass; do not broaden into argument review unless the user asks.
-- Phase 2 edits only after user approval.
-- If the user pasted text and asks for direct correction, provide corrected text in chat.
-- Do not change technical meaning.
-
-## What to check
+Phase 1 is read-only: report issues, never edit files. Phase 2 edits only after
+user approval; if the user pasted text asking for direct correction, return
+corrected text in chat. Preserve technical meaning and author voice; report
+severity + proposed fix + confidence per issue. Check:
 
 1. Grammar, spelling, articles, prepositions, agreement.
 2. Non-native or awkward academic phrasing.
 3. Overclaim words: significant, SOTA, robust, general, novel, intuitive, seamless.
-4. Tense consistency: present for established knowledge, past for conducted experiments.
+4. Tense: present for established knowledge, past for conducted experiments.
 5. Notation and acronym consistency.
 6. Figure/table/caption clarity and cross-references.
-7. LaTeX issues: missing refs, undefined commands, bad math punctuation, inconsistent citation commands.
+7. LaTeX: missing refs, undefined commands, bad math punctuation, inconsistent citation commands.
 8. Hyphenation and terminology consistency.
 9. Abstract/conclusion alignment at the wording level.
 
-## Output schema
+## Output
 
-```markdown
-# Proofreading Report
+Proofreading Report containing:
 
-## Critical Fixes
-| Location | Text snippet | Issue | Proposed fix | Confidence |
-|---|---|---|---|---|
+- **Critical Fixes** / **Major Fixes** / **Minor-Style Fixes** — each a table:
+  `Location | Text snippet | Issue | Proposed fix | Confidence`.
+- **Consistency Table** — `Term/acronym/notation | Variants found | Recommended form | Action`.
+- **LaTeX / Reference Issues** — issue list, or "Not checked."
+- **Edit Readiness** — `Safe to apply automatically: yes/no`; `Requires author decision: [bullets]`.
 
-## Major Fixes
-| Location | Text snippet | Issue | Proposed fix | Confidence |
-|---|---|---|---|---|
+Severity: **Critical** — title/abstract typo, wrong variable, contradiction,
+broken citation/ref, grammar that changes meaning. **Major** — awkward/unclear
+sentence, undefined term, inconsistent notation, unsupported strong word.
+**Minor/style** — concision, local flow, formatting, repeated words that do not
+change meaning.
 
-## Minor / Style Fixes
-| Location | Text snippet | Issue | Proposed fix | Confidence |
-|---|---|---|---|---|
+## Reject when
 
-## Consistency Table
-| Term / acronym / notation | Variants found | Recommended form | Action |
-|---|---|---|---|
+- a proposed edit would change technical meaning;
+- asked to add new citations, results, or claims;
+- asked to rewrite whole sections (defer to research-write) unless explicitly requested;
+- a fix would require fabricating citations or facts;
+- in OMX/team contexts, broadening beyond line-level polishing into argument
+  review — stay a verifier pass; route to research-review unless the user asks.
 
-## LaTeX / Reference Issues
-- [Issue or “Not checked.”]
+## State & Handoff
 
-## Edit Readiness
-- Safe to apply automatically: [yes/no]
-- Requires author decision: [bullets]
-```
-
-## Severity guide
-
-- **Critical:** typo in title/abstract, wrong variable, contradiction, broken citation/ref, grammar that changes meaning.
-- **Major:** awkward or unclear sentence, undefined term, inconsistent notation, unsupported strong word.
-- **Minor/style:** concision, local flow, formatting, repeated words that do not change meaning.
-
-## Guardrails
-
-- Do not fabricate citations or facts.
-- Do not add new results.
-- Do not rewrite whole sections unless asked.
-- Preserve author voice and venue tone.
+State: Phase 1 report delivered; Phase 2 edits blocked on user approval, with
+Edit Readiness flagging auto-apply vs author-decision items. Next: research-write
+(structural rewrites surfaced as "author decision") / research-review
+(acceptance risk) / submission. Artifacts: proofreading report only — no claims,
+citations, or results are added by this pass.

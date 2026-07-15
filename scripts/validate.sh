@@ -19,7 +19,7 @@ pass "plugin manifest JSON parses"
 python3 - <<'PY'
 from pathlib import Path
 
-for rel in ("skills/research-pdfs/crawler.py", "scripts/harness.py"):
+for rel in ("skills/research-survey/crawler.py", "scripts/harness.py"):
     text = Path(rel).read_text()
     compile(text, rel, "exec")
 PY
@@ -110,11 +110,42 @@ assert set(skills) == expected, sorted(set(skills) ^ expected)
 print(f'PASS: skill frontmatter and catalog set ({len(skills)} skills)')
 PY
 
-python3 skills/research-pdfs/crawler.py --help >/tmp/research-skills-pdf-help.txt
+python3 - <<'PY'
+import json, re
+from pathlib import Path
+
+owned = {item['name'] for item in json.loads(Path('skills/manifest.json').read_text())['owned']}
+
+# 1. The AGENTS.md template ships as a project prompt via `harness init --full`.
+#    Every skill it lists as a canonical bullet must still be owned (catches
+#    stale `pptx` / `research-pdfs` drift after a trim).
+agents = Path('templates/research/AGENTS.md').read_text()
+listed = set(re.findall(r'(?m)^- `([a-z][a-z0-9-]*)` — ', agents))
+stale = sorted(name for name in listed if name not in owned)
+assert not stale, f'AGENTS.md template lists non-owned skills: {stale}'
+
+# 2. Every non-router role skill carries the canonical 5-section template.
+required = ['## What & When', '## Procedure', '## Output', '## Reject when', '## State & Handoff']
+for f in sorted(Path('skills').glob('research-*/SKILL.md')):
+    text = f.read_text()
+    missing = [h for h in required if h not in text]
+    assert not missing, f'{f} missing template headings: {missing}'
+print('PASS: AGENTS.md template skills are owned; role skills use the 5-section template')
+PY
+
+python3 - <<'PY'
+from pathlib import Path
+refs = Path('skills/coresearch/references')
+for name in ('evidence-grounding', 'research-contract', 'state-ledger', 'reasoning-skills'):
+    assert (refs / f'{name}.md').exists(), f'missing shared ref: {name}.md'
+PY
+pass "shared evidence references exist"
+
+python3 skills/research-survey/crawler.py --help >/tmp/research-skills-pdf-help.txt
 grep -q -- '--dry-run' /tmp/research-skills-pdf-help.txt
 grep -q -- '--yes-large' /tmp/research-skills-pdf-help.txt
 grep -q -- '--allow-publisher-pdf' /tmp/research-skills-pdf-help.txt
-pass "research-pdfs safety flags exposed"
+pass "research-survey crawler safety flags exposed"
 
 sample_dir="$(mktemp -d)"
 cat > "$sample_dir/papers.md" <<'MD'
@@ -122,17 +153,17 @@ cat > "$sample_dir/papers.md" <<'MD'
 |---|---|---|---|---|
 | 1 | Attention Is All You Need | Vaswani et al. | NeurIPS | 2017 |
 MD
-python3 skills/research-pdfs/crawler.py "$sample_dir/papers.md" --dry-run --limit 1 >/tmp/research-skills-pdf-dryrun.txt
+python3 skills/research-survey/crawler.py "$sample_dir/papers.md" --dry-run --limit 1 >/tmp/research-skills-pdf-dryrun.txt
 if [[ -d "$sample_dir/pdf" ]] && find "$sample_dir/pdf" -type f | grep -q .; then
-  fail "research-pdfs dry run created PDF files"
+  fail "crawler dry run created PDF files"
 fi
-pass "research-pdfs dry run does not download files"
+pass "crawler dry run does not download files"
 
 user_home="$(mktemp -d)"
 echo "GLOBAL HEADER" > "$user_home/AGENTS.md"
 ./scripts/install.sh --scope user --codex-home "$user_home" --global-bridge >/tmp/research-skills-install-user-1.txt
 [[ -f "$user_home/skills/research-loop/SKILL.md" ]] || fail "user install missing research-loop"
-[[ -f "$user_home/skills/research-pdfs/crawler.py" ]] || fail "user install missing crawler"
+[[ -f "$user_home/skills/research-survey/crawler.py" ]] || fail "user install missing crawler"
 grep -q 'GLOBAL HEADER' "$user_home/AGENTS.md" || fail "existing global AGENTS content was not preserved"
 grep -q 'RESEARCH_AGENT_SKILLS:START' "$user_home/AGENTS.md" || fail "user bridge missing"
 grep -qF "$BRIDGE_HANDOFF_LINE" "$user_home/AGENTS.md" || fail "user bridge missing subagent handoff line"
@@ -187,21 +218,21 @@ both_claude_home="$(mktemp -d)"
 [[ -L "$both_claude_home/skills/coresearch" ]] || fail "harness link both missing claude coresearch"
 [[ -L "$both_claude_home/skills/research-design" ]] || fail "harness link both missing claude research-design"
 [[ ! -e "$both_claude_home/skills/paper-design" && ! -L "$both_claude_home/skills/paper-design" ]] || fail "harness link both unexpectedly kept claude paper-design alias"
-mkdir -p "$both_codex_home/plugins/cache/vendor/skills/pptx"
-cat > "$both_codex_home/plugins/cache/vendor/skills/pptx/SKILL.md" <<'MD'
+mkdir -p "$both_codex_home/plugins/cache/vendor/skills/research-loop"
+cat > "$both_codex_home/plugins/cache/vendor/skills/research-loop/SKILL.md" <<'MD'
 ---
-name: pptx
-description: External Codex plugin PPTX skill with same name as Coresearch-owned skill.
+name: research-loop
+description: External Codex plugin skill with same name as a Coresearch-owned skill.
 ---
-# External PPTX
+# External research-loop
 MD
-mkdir -p "$both_claude_home/plugins/marketplaces/vendor/skills/pptx"
-cat > "$both_claude_home/plugins/marketplaces/vendor/skills/pptx/SKILL.md" <<'MD'
+mkdir -p "$both_claude_home/plugins/marketplaces/vendor/skills/research-loop"
+cat > "$both_claude_home/plugins/marketplaces/vendor/skills/research-loop/SKILL.md" <<'MD'
 ---
-name: pptx
-description: External Claude plugin PPTX skill with same name as Coresearch-owned skill.
+name: research-loop
+description: External Claude plugin skill with same name as a Coresearch-owned skill.
 ---
-# External PPTX
+# External research-loop
 MD
 mkdir -p "$both_codex_home/plugins/cache/vendor/skills/ponytail"
 cat > "$both_codex_home/plugins/cache/vendor/skills/ponytail/SKILL.md" <<'MD'
@@ -213,10 +244,10 @@ description: External preference skill for over-engineering review.
 MD
 ln -s "$both_codex_home/.orchestra/skills/old-research" "$both_codex_home/skills/old-research"
 ./harness inventory --codex-home "$both_codex_home" --claude-home "$both_claude_home" --include-plugins >/tmp/research-skills-harness-inventory-overlap.txt
-grep -q $'codex-user\towned\tpptx' /tmp/research-skills-harness-inventory-overlap.txt || fail "inventory did not classify codex user pptx as owned"
-grep -q $'claude-user\towned\tpptx' /tmp/research-skills-harness-inventory-overlap.txt || fail "inventory did not classify claude user pptx as owned"
-grep -q $'codex-cache\tplugin-overlap\tpptx' /tmp/research-skills-harness-inventory-overlap.txt || fail "inventory did not classify codex cache pptx as plugin-overlap"
-grep -q $'claude-marketplace\tplugin-overlap\tpptx' /tmp/research-skills-harness-inventory-overlap.txt || fail "inventory did not classify marketplace pptx as plugin-overlap"
+grep -q $'codex-user\towned\tresearch-loop' /tmp/research-skills-harness-inventory-overlap.txt || fail "inventory did not classify codex user research-loop as owned"
+grep -q $'claude-user\towned\tresearch-loop' /tmp/research-skills-harness-inventory-overlap.txt || fail "inventory did not classify claude user research-loop as owned"
+grep -q $'codex-cache\tplugin-overlap\tresearch-loop' /tmp/research-skills-harness-inventory-overlap.txt || fail "inventory did not classify codex cache research-loop as plugin-overlap"
+grep -q $'claude-marketplace\tplugin-overlap\tresearch-loop' /tmp/research-skills-harness-inventory-overlap.txt || fail "inventory did not classify marketplace research-loop as plugin-overlap"
 grep -q $'codex-cache\tpreference\tponytail' /tmp/research-skills-harness-inventory-overlap.txt || fail "inventory did not classify ponytail as preference"
 grep -q $'codex-user\tlegacy-orchestra\told-research' /tmp/research-skills-harness-inventory-overlap.txt || fail "inventory did not surface legacy orchestra symlink"
 pass "harness link --surface both"
@@ -245,7 +276,7 @@ pass "harness global bridge dry/apply/remove"
 doctor_home="$(mktemp -d)"
 printf '# oh-my-codex - Intelligent Multi-Agent Orchestration\n<!-- OMX:RUNTIME:START -->\n<!-- OMX:RUNTIME:END -->\n' > "$doctor_home/AGENTS.md"
 ./harness link --codex-home "$doctor_home" >/tmp/research-skills-harness-doctor-link.txt
-./harness doctor --codex-home "$doctor_home" --target . --strict >/tmp/research-skills-harness-doctor.txt
+CLAUDE_HOME="$doctor_home" ./harness doctor --codex-home "$doctor_home" --target . --strict >/tmp/research-skills-harness-doctor.txt
 grep -q 'Doctor result: PASS' /tmp/research-skills-harness-doctor.txt || fail "harness doctor did not pass"
 pass "harness doctor strict"
 
@@ -254,7 +285,7 @@ printf '# oh-my-codex - Intelligent Multi-Agent Orchestration\n<!-- OMX:RUNTIME:
 ./harness link --codex-home "$broken_home" >/tmp/research-skills-harness-broken-link-setup.txt
 rm -f "$broken_home/skills/research-loop"
 ln -s "$broken_home/does-not-exist" "$broken_home/skills/research-loop"
-if ./harness doctor --codex-home "$broken_home" --target . --strict >/tmp/research-skills-harness-broken-link-doctor.txt 2>&1; then
+if CLAUDE_HOME="$broken_home" ./harness doctor --codex-home "$broken_home" --target . --strict >/tmp/research-skills-harness-broken-link-doctor.txt 2>&1; then
   fail "harness doctor passed with a broken skill symlink"
 fi
 grep -q 'bad skill install: research-loop: symlink:BROKEN' /tmp/research-skills-harness-broken-link-doctor.txt || fail "harness doctor did not report broken research-loop symlink"
@@ -263,7 +294,7 @@ pass "harness doctor rejects broken skill symlinks"
 repair_home="$(mktemp -d)"
 repair_bin="$(mktemp -d)"
 printf '# oh-my-codex - Intelligent Multi-Agent Orchestration\n<!-- OMX:RUNTIME:START -->\n<!-- OMX:RUNTIME:END -->\n' > "$repair_home/AGENTS.md"
-./harness repair --codex-home "$repair_home" --bin-dir "$repair_bin" --target . --no-validate >/tmp/research-skills-harness-repair.txt
+CLAUDE_HOME="$repair_home" ./harness repair --codex-home "$repair_home" --bin-dir "$repair_bin" --target . --no-validate >/tmp/research-skills-harness-repair.txt
 [[ -L "$repair_home/skills/research-loop" ]] || fail "harness repair did not relink research-loop"
 [[ -L "$repair_bin/harness" ]] || fail "harness repair did not install harness command"
 grep -q 'Doctor result: PASS' /tmp/research-skills-harness-repair.txt || fail "harness repair did not run strict doctor"
@@ -363,5 +394,94 @@ if command -v omx >/dev/null 2>&1; then
 else
   echo "WARN: omx not found on PATH; skipped runtime availability check"
 fi
+
+python3 - <<'PY'
+# #5: every depends_on: target in a research-*/SKILL.md frontmatter must resolve
+# to an existing file when joined to the skill dir.
+import re
+from pathlib import Path
+
+dead = []
+checked = 0
+for f in sorted(Path('skills').glob('research-*/SKILL.md')):
+    text = f.read_text()
+    m = re.match(r'^---\n(.*?)\n---\n', text, re.S)
+    assert m, f'Missing frontmatter: {f}'
+    lines = m.group(1).splitlines()
+    for idx, line in enumerate(lines):
+        if not line.startswith('depends_on:'):
+            continue
+        rest = line.split(':', 1)[1].strip()
+        targets = []
+        if rest:
+            targets.append(rest)
+        for nxt in lines[idx + 1:]:
+            if not nxt.startswith((' ', '\t')):
+                break
+            lm = re.match(r'\s+-\s+(.+?)\s*$', nxt)
+            if lm:
+                targets.append(lm.group(1).strip())
+        for rel in targets:
+            checked += 1
+            resolved = (f.parent / rel).resolve()
+            if not resolved.exists():
+                dead.append((str(f), rel, str(resolved)))
+assert not dead, f'unresolved depends_on targets: {dead}'
+print(f'PASS: depends_on targets resolve ({checked} checked)')
+PY
+
+gate_tmp="$(mktemp -d)"
+{
+  printf '| # | 제목 | 저자 | 저널/학회 | 비고 |\n|---|---|---|---|---|\n'
+  for i in $(seq 1 35); do
+    printf '| %d | Alpha%d Study | Smith%d | Venue | 2020 |\n' "$i" "$i" "$i"
+  done
+} > "$gate_tmp/papers.md"
+# #9: --dry-run bypasses the >30 gate by design (the gate requires not dry_run),
+# so to exercise the gate branch with NO network we run WITHOUT --dry-run: the
+# refusal prints and crawl() returns before any process_one()/HTTP call.
+python3 skills/research-survey/crawler.py "$gate_tmp/papers.md" >/tmp/research-skills-crawler-gate.txt 2>&1 || true
+grep -q 'refusing to process more than 30 papers' /tmp/research-skills-crawler-gate.txt || fail "crawler did not refuse >30 papers without --yes-large"
+if find "$gate_tmp" -type f | grep -qv 'papers\.md$'; then
+  fail "crawler >30 gate wrote files before refusal"
+fi
+python3 skills/research-survey/crawler.py "$gate_tmp/papers.md" --dry-run >/tmp/research-skills-crawler-gate-dry.txt 2>&1
+grep -q 'DRY RUN' /tmp/research-skills-crawler-gate-dry.txt || fail "crawler --dry-run did not short-circuit past the gate"
+rm -rf "$gate_tmp"
+pass "crawler >30-paper gate refuses without --yes-large and writes no files; --dry-run bypasses gate (no network)"
+
+python3 - <<'PY'
+# #10: resolve relative markdown links and bare references/*.md mentions under
+# skills/ against each file's dir; assert every target exists.
+import re
+from pathlib import Path
+
+link_re = re.compile(r'\[([^\]]*)\]\(([^)]+)\)')
+# Lookbehind skips the trailing segment of a longer ../coresearch/references/...
+# path, so only standalone references/ mentions are resolved.
+ref_re = re.compile(r'(?<![\w./])references/[A-Za-z0-9_./-]+\.md')
+
+dead = []
+checked = 0
+for md in sorted(Path('skills').rglob('*.md')):
+    text = md.read_text()
+    targets = []
+    for m in link_re.finditer(text):
+        raw = m.group(2).strip()
+        if raw.startswith(('http://', 'https://', 'mailto:', '#')):
+            continue
+        path_part = raw.split('#', 1)[0]
+        if path_part:
+            targets.append(path_part)
+    for m in ref_re.finditer(text):
+        targets.append(m.group(0))
+    for t in targets:
+        checked += 1
+        resolved = (md.parent / t).resolve()
+        if not resolved.exists():
+            dead.append((str(md), t, str(resolved)))
+assert not dead, f'dead relative links under skills/: {dead}'
+print(f'PASS: no dead relative links under skills/ ({checked} targets)')
+PY
 
 pass "all validations completed"

@@ -1,56 +1,73 @@
 ---
 name: research-survey
-description: Verified literature survey and related-work synthesis for research topics. Use when the user asks for related work, papers on a topic, citation categories, a literature map, novelty risks, survey writing, or paper recommendations. Requires real-paper verification, research-pdfs-compatible evidence tables when useful, and explicit metadata/PDF confidence; never fabricates citations, venues, or paper claims.
+description: Verified literature survey and related-work synthesis for research topics. Use when the user asks for related work, papers on a topic, citation categories, a literature map, survey writing, or paper recommendations. Requires real-paper verification, crawler-compatible evidence tables when useful, and explicit metadata/PDF confidence; never fabricates citations, venues, or paper claims.
 ---
 
-# Research Survey
+# research-survey — Literature Survey & Related Work
 
-Find, verify, classify, and synthesize real papers. Default output is an in-chat Markdown survey. Generate LaTeX, BibTeX, or PDF only when requested.
+Find, verify, classify, synthesize real papers — real papers, not inferred
+papers. Default is an in-chat Markdown survey; LaTeX/BibTeX/PDF only on request.
 
-## Good for
+## What & When
 
-- Verified related work, literature maps, paper recommendations, novelty-risk analysis, citation categories, and survey prose.
-- Finding closest competitors across AI, Robotics, Graphics, HCI, and hybrid fields.
-- Producing `research-pdfs`-compatible roadmaps when full-text verification is needed.
+Verified related work, literature maps, paper recommendations, citation
+categories, survey prose, closest-competitor search (AI / Robotics / Graphics /
+HCI / hybrid), crawler roadmaps when full-text verification is needed. Use when:
+"related work", "papers on X", "literature map", "survey", "citation
+categories", "closest competitors", "what should I cite".
+Not for: batch PDF download → in-skill crawler
+(`skills/research-survey/crawler.py`); contribution planning → `research-design`;
+fixed draft/source fact-check → `research-verify`; gaps worth a paper
+(importance × tractability × novelty, with falsification) → `research-gap`.
+research-survey maps the field; it does not judge or falsify gaps.
 
-## Must do
+## Procedure
 
-- Verify paper existence and metadata before citing.
-- Assign evidence level: `PDF VERIFIED`, `FULL TEXT VERIFIED`, `METADATA VERIFIED`, `PARTIALLY VERIFIED`, or `NOT FOUND`.
-- Synthesize by mechanism, research question, field object, or contribution type; do not list papers chronologically by default.
-- Keep metadata-only papers out of detailed method/result/limitation claims.
+Verify existence and metadata before citing. Synthesize by mechanism, research
+question, field object, or contribution type — never chronology by default.
+Keep metadata-only papers out of detailed method/result/limitation claims.
 
-## Not for
+**Search policy.** OMX `researcher` posture when available: official /
+proceedings / source-backed first, version/date awareness, links in the final
+answer. Prefer primary sources: (1) paper PDFs, publisher pages,
+arXiv/OpenReview/ACM/IEEE/official proceedings; (2) DBLP, Semantic Scholar,
+OpenReview, Google Scholar snippets when accessible; (3) project pages/blogs
+only as secondary evidence. Do not cite without verified existence and key
+metadata.
 
-- Batch PDF downloading itself; use `research-pdfs`.
-- Paper contribution planning; use `research-design`.
-- Fact-checking a fixed draft/source pair; use `research-verify`.
+**Verification status — assign to every paper; this is the skill's axis:**
 
-## Search policy
+- `PDF VERIFIED` — full text or PDF retrieved and inspected, and the survey claim is supported by that text.
+- `FULL TEXT VERIFIED` — official HTML/full-text page inspected when no PDF is needed or available.
+- `METADATA VERIFIED` — title, authors, venue/year, source link verified, but paper text not inspected; only existence, bibliographic, or high-level positioning claims.
+- `PARTIALLY VERIFIED` — some metadata unresolved or conflicting; not a closest-competitor claim without caveat.
+- `NOT FOUND` — candidate or manual-follow-up item; do not cite as established work.
 
-Use the OMX `researcher` posture when available: official/proceedings/source-backed references first, version/date awareness, and links in the final answer. When current or exact literature matters and web/search tools are available, search and prefer primary sources:
+Uncertain metadata → `PARTIALLY VERIFIED`. Never infer methods, results, venue,
+or contribution from a title, citation graph, abstract snippet, or model memory.
+Never upgrade beyond `METADATA VERIFIED` without inspected paper text.
 
-1. paper PDFs, publisher pages, arXiv/OpenReview/ACM/IEEE/official proceedings;
-2. DBLP, Semantic Scholar, OpenReview, Google Scholar snippets when accessible;
-3. project pages or blogs only as secondary evidence.
+**Workflow:**
 
-Do not cite a paper unless its existence and key metadata are verified. If metadata is uncertain, mark it `PARTIALLY VERIFIED`.
+1. **Scope** — topic, venue community, time window, desired depth. Ask one question only if scope is impossible to infer.
+2. **Search broadly** — multiple query formulations and adjacent terms.
+3. **Evidence ledger** — candidates in a crawler-compatible roadmap table (or equivalent in-chat table) before synthesis.
+4. **Verify each candidate** — title, authors, venue/year, DOI/arXiv/OpenReview/proceedings link when possible; assign verification status.
+5. **Crawl or inspect text when needed** — crawler for batch open-access PDFs when a roadmap file exists; otherwise inspect official PDFs/full text directly.
+6. **Classify** — group by mechanism, research question, or contribution type, not chronology.
+7. **Synthesize from evidence** — what each stream enabled, its assumptions, how the user's project differs or builds on it. Metadata-only papers stay out of detailed result claims.
+8. **Identify risks** — closest competitors, missing citations, novelty overlap, weak positioning.
+9. **Output sources** — links used + crawler command/output summary when run.
 
-## Real-paper and PDF evidence policy
+**Inclusion.** No rigid citation-count threshold unless the user asks. Include
+directly competing work even if not highly cited; foundational work; recent or
+concurrent work; strong surveys with useful taxonomies; official benchmarks or
+datasets when relevant.
 
-The default standard is **real papers, not inferred papers**. Do not infer a paper's methods, results, venue, or contribution from a title, citation graph, abstract snippet, or model memory alone.
+**Crawler workflow** — when exactness matters, the user says "don't assume", or
+the task asks for a paper list/roadmap:
 
-Use explicit evidence levels:
-
-- `PDF VERIFIED` — full text or PDF was retrieved and inspected, and the survey claim is supported by that text.
-- `FULL TEXT VERIFIED` — official HTML/full-text page was inspected when no PDF is needed or available.
-- `METADATA VERIFIED` — title, authors, venue/year, and source link were verified, but the paper text was not inspected; only make existence, bibliographic, or high-level positioning claims.
-- `PARTIALLY VERIFIED` — some metadata is unresolved or conflicting; do not use as a closest-competitor claim without caveat.
-- `NOT FOUND` — keep as a candidate or manual-follow-up item; do not cite as established work.
-
-When exactness matters, when the user says not to assume, or when the task asks for a paper list/roadmap, align with `research-pdfs`:
-
-1. Build or request a Markdown roadmap table in the crawler's supported format:
+1. Build or request a roadmap table in the crawler's format:
 
    ```markdown
    | # | 제목 | 저자 | 저널/학회 | 비고 |
@@ -58,41 +75,20 @@ When exactness matters, when the user says not to assume, or when the task asks 
    | 1 | Paper Title | First Author et al. | Venue/Journal | Year; DOI/arXiv/OpenReview/proceedings link |
    ```
 
-2. If a file path is available and downloading is requested or useful for verification, run a dry run first:
+2. Dry run first:
 
    ```bash
-   python3 skills/research-pdfs/crawler.py "<path-to-roadmap.md>" --dry-run
+   python3 skills/research-survey/crawler.py "<path-to-roadmap.md>" --dry-run    # dev (repo root)
+   python3 "<SKILLS_DIR>/research-survey/crawler.py" "<path-to-roadmap.md>" --dry-run   # installed
    ```
 
-   If this repository path is not current, resolve the crawler relative to the `research-pdfs` skill folder.
+   `<SKILLS_DIR>` is your installed skills root (`~/.codex/skills` or project `.codex/skills`); resolve the crawler relative to the `research-survey` skill folder.
 
-3. For real downloads, follow `research-pdfs` guardrails exactly: open-access sources by default, no paywall bypassing, fuzzy DOI matches are candidates only, and lists over 30 papers require reviewed dry-run output plus `--yes-large`.
+3. For real downloads, follow guardrails exactly: open-access sources by default, no paywall bypassing, `--allow-publisher-pdf` only for legitimately accessible publisher PDFs, fuzzy DOI matches are candidates only, and lists over 30 papers require reviewed dry-run output plus `--yes-large`.
 4. Use downloaded PDFs in `pdf/` next to the roadmap, official full-text pages, or verified source PDFs as the basis for method/result/limitation claims.
-5. If the user only requested an in-chat survey and did not request file writes/downloads, do not create files solely for process; instead include a `PDF Crawl Roadmap` table that can be saved and passed to `research-pdfs`.
+5. If the user only requested an in-chat survey and did not request file writes/downloads, do not create files solely for process — include a `PDF Crawl Roadmap` table that can be saved and passed to the crawler.
 
-## Workflow
-
-1. **Scope.** Identify topic, venue community, time window, and desired depth. Ask one question only if scope is impossible to infer.
-2. **Search broadly.** Use multiple query formulations and adjacent terms.
-3. **Create the evidence ledger.** Record candidates in a `research-pdfs`-compatible roadmap table or equivalent in-chat table before synthesis.
-4. **Verify each candidate.** Confirm title, authors, venue/year, DOI/arXiv/OpenReview/proceedings link when possible; assign an evidence level.
-5. **Crawl or inspect paper text when needed.** Use `research-pdfs` for batch open-access PDFs when a roadmap file is available; otherwise inspect official PDFs/full text directly. Do not upgrade beyond `METADATA VERIFIED` without paper text.
-6. **Classify.** Group by mechanism, research question, or contribution type, not chronology.
-7. **Synthesize from evidence.** Explain what each stream enabled, what assumptions it makes, and how the user's project differs or builds on it. Keep metadata-only papers out of detailed result claims.
-8. **Identify risks.** Closest competitors, missing citations, novelty overlap, weak positioning.
-9. **Output sources.** Include links used and any `research-pdfs` command/output summary when run.
-
-## Inclusion guidance
-
-Do not impose a rigid citation-count threshold unless the user asks. Include:
-
-- directly competing work even if not highly cited;
-- foundational work;
-- recent or concurrent work;
-- strong surveys with useful taxonomies;
-- official benchmarks or datasets when relevant.
-
-## Output schema
+## Output
 
 ```markdown
 # Literature Map — [Topic]
@@ -103,18 +99,18 @@ Do not impose a rigid citation-count threshold unless the user asks. Include:
 - Search status: [verified / partial]
 - Inclusion rule:
 - Evidence standard: [PDF/full-text inspected / metadata-only allowed with caveats]
-- research-pdfs status: [not needed / roadmap provided / dry run / downloaded / partial]
+- PDF crawl status: [not needed / roadmap provided / dry run / downloaded / partial]
 
 ## Taxonomy
 1. [Stream]: [what this stream studies or enables]
 2. [Stream]: [what this stream studies or enables]
 
 ## Paper Table
-| Paper | Authors | Venue/Year | Link | Category | Why it matters | Evidence level | PDF status |
+| Paper | Authors | Venue/Year | Link | Category | Why it matters | Verification status | PDF status |
 |---|---|---|---|---|---|---|---|
 
 ## PDF Crawl Roadmap
-Use this when PDFs should be fetched with `research-pdfs`; omit if no crawl/download workflow is needed.
+Use this when PDFs should be fetched with the crawler; omit if no crawl/download workflow is needed.
 
 | # | 제목 | 저자 | 저널/학회 | 비고 |
 |---|---|---|---|---|
@@ -140,21 +136,31 @@ Use this when PDFs should be fetched with `research-pdfs`; omit if no crawl/down
 - [Links]
 
 ## Verification Notes
-- research-pdfs command/output summary if run:
+- crawler command/output summary if run:
 - Metadata-only papers and why:
 - Not-found/manual-access papers:
 ```
 
-## Citation integrity checks
+## Reject when
 
-Before final output, check:
+Before final output, reject or fix:
 
-- no invented title or venue;
-- arXiv year is not confused with publication year;
-- author list is not guessed;
-- claims about a paper's results are supported by its abstract, paper text, or verified metadata;
-- method/result/limitation claims are not made from metadata-only papers;
-- fuzzy `research-pdfs` or DOI matches are not treated as verified papers;
-- papers that `research-pdfs` reports as not found are not cited as established evidence unless independently verified elsewhere;
-- local PDFs or official full text were actually inspected before marking `PDF VERIFIED` or `FULL TEXT VERIFIED`;
-- any uncertainty is explicitly marked.
+- invented title or venue;
+- arXiv year confused with publication year;
+- guessed author list;
+- paper-result claim not supported by its abstract, paper text, or verified metadata;
+- method/result/limitation claim from a metadata-only paper;
+- fuzzy crawler or DOI match treated as a verified paper;
+- crawler "not found" paper cited as established evidence unless independently verified elsewhere;
+- `PDF VERIFIED` or `FULL TEXT VERIFIED` marked without actually inspecting local PDFs or official full text;
+- any uncertainty left unmarked.
+
+## State & Handoff
+
+State: every paper carries a `verification_status`; never upgrade without the
+matching evidence (PDF inspected / full text inspected / metadata confirmed).
+Next: research-gap (map → gaps) / research-audit (load-bearing paper) /
+research-verify (one-citation fact check) / research-design (contribution
+planning). Artifacts: in-chat literature map, optional roadmap `.md` + `pdf/`
+when a crawl was run. Carry forward not-found and partially-verified papers as
+manual follow-ups.

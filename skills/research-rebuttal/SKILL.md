@@ -3,44 +3,37 @@ name: research-rebuttal
 description: Rebuttal and response-planning workflow for research paper reviews. Use when the user provides reviewer comments, scores, meta-reviews, or discussion-phase feedback and wants a response strategy, score movement forecast, experiments or clarifications to add, or concise rebuttal text for venues such as NeurIPS, ICLR, CVPR, SIGGRAPH, CHI, UIST, or AISTATS.
 ---
 
-# Research Rebuttal
+# research-rebuttal — Review Response Planner
 
-Turn reviews into a score-moving response strategy. Prioritize factual corrections, misunderstandings, and feasible evidence additions. Do not promise new experiments or claims unless the user confirms they can be done. In OMX workflows, keep this as a planning/handoff artifact; do not implement new experiments unless execution mode is explicitly selected.
+Turn reviews into a score-moving strategy: lead with factual corrections and
+consensus clarifications, never fight every sentence. Planning artifact only —
+no new experiments unless execution mode is explicit.
 
-## Good for
+## What & When
 
-- Parsing reviews, diagnosing score blockers, planning response strategy, forecasting movement, and drafting concise rebuttal bullets.
-- Identifying which clarification, experiment, table, figure, or wording change can realistically move scores.
-- Separating legitimate weaknesses from reviewer misunderstandings.
+Use when reviews already exist — reviewer comments, scores, meta-reviews, or
+discussion feedback provided — and the user wants a response strategy, score
+movement forecast, or concise rebuttal for NeurIPS/ICLR/CVPR/SIGGRAPH/CHI/UIST/
+AISTATS. Also use to decide what clarification, experiment, table, figure, or
+wording change can realistically move scores. Not for: running new experiments →
+research-engineer; adversarial replies; post-hoc or invented claims.
 
-## Must do
+## Procedure
 
-- Extract reviewer stance, confidence, positive anchors, and score-blocking concerns.
-- Classify concern type and leverage.
-- Prioritize consensus issues and high-leverage corrections; do not fight every sentence.
-- Avoid promises unless the user confirms the experiment/edit is feasible and allowed.
-
-## Not for
-
-- Running new experiments; hand off to `research-engineer` or an execution workflow.
-- Defensive or adversarial reviewer replies.
-- Inventing extra evidence or post-hoc claims.
-
-## Inputs
-
-Use reviewer text, scores, confidence, paper context, constraints, response length, and allowed updates. If scores are missing, infer likely stance with low-to-moderate confidence.
-
-## Workflow
-
-1. **Parse each review.** Extract likely score, confidence, positive anchors, and score-blocking concerns.
-2. **Classify concerns.** Factual misunderstanding, missing explanation, missing experiment, novelty overlap, weak evidence, writing issue, fundamental flaw.
-3. **Estimate leverage.** High, medium, low, or very low score movement potential.
-4. **Build global strategy.** Lead with consensus corrections and score-moving clarifications. Do not fight every point.
-5. **Plan additions.** Feasible experiments, tables, figures, citations, or text changes if allowed.
+1. **Parse each review.** Likely score, confidence, positive anchors,
+   score-blocking concerns. Infer stance at low–moderate confidence if scores missing.
+2. **Classify concerns.** Factual misunderstanding / missing explanation / missing
+   experiment / novelty overlap / weak evidence / writing issue / fundamental flaw.
+3. **Estimate leverage** — high / medium / low / very low score-movement potential
+   via the guide below.
+4. **Build global strategy.** Lead with consensus corrections and score-moving
+   clarifications. Do not fight every point.
+5. **Plan additions.** Feasible experiments, tables, figures, citations, or text
+   changes — only if allowed and the user confirms feasibility.
 6. **Draft response bullets.** Concise, respectful, evidence-based.
 7. **Forecast movement.** Post-rebuttal scores and decision path.
 
-## Leverage guide
+Leverage guide:
 
 | Concern type | Typical leverage |
 |---|---|
@@ -53,53 +46,32 @@ Use reviewer text, scores, confidence, paper context, constraints, response leng
 | Writing clarity | Medium to high |
 | Fundamental technical flaw | Very low |
 
-## Output schema
+## Output
 
-```markdown
-# Rebuttal Plan — [Venue]
+- **Global Strategy** — 3–5 bullets in priority order.
+- **Review-by-Review Diagnosis** (one block per reviewer): likely score / stance;
+  confidence; positive anchors; score-moving concerns; legitimate weaknesses;
+  possible misunderstandings; rebuttal leverage (high / medium / low / very low);
+  best response strategy.
+- **Cross-Reviewer Themes** — table: Theme | Reviewers | Severity | Response
+  priority | Evidence needed.
+- **Prioritized Response Bullets** — each point paired with its evidence.
+- **Additions if Allowed** — table: Addition | Addresses | Feasibility | Expected
+  score impact.
+- **Risks and What Not to Say** — risks plus overclaims / defensive phrasing to avoid.
+- **Predicted Score Movement** — table: Reviewer | Before | After forecast | Reason.
+- **Draft Rebuttal Skeleton** — concise paragraph/bullet structure, not padded prose.
 
-## Global Strategy
-[3–5 bullets in priority order.]
+## Reject when (gates)
 
-## Review-by-Review Diagnosis
-### Reviewer [ID]
-- Likely score / stance:
-- Confidence:
-- Positive anchors:
-- Score-moving concerns:
-- Legitimate weaknesses:
-- Possible misunderstandings:
-- Rebuttal leverage: [high / medium / low / very low]
-- Best response strategy:
+- promising an experiment or edit the user has not confirmed feasible (or venue disallows);
+- attacking reviewers, or any defensive / adversarial tone;
+- unsupported or post-hoc claims;
+- a legitimate weakness left unacknowledged — acknowledge it and scope the claim.
 
-## Cross-Reviewer Themes
-| Theme | Reviewers | Severity | Response priority | Evidence needed |
-|---|---|---|---|---|
+## State & Handoff
 
-## Prioritized Response Bullets
-1. [Response point with evidence]
-2. [Response point with evidence]
-3. [Response point with evidence]
-
-## Additions if Allowed
-| Addition | Addresses | Feasibility | Expected score impact |
-|---|---|---|---|
-
-## Risks and What Not to Say
-- [Risk]
-- [Overclaim or defensive phrasing to avoid]
-
-## Predicted Score Movement
-| Reviewer | Before | After forecast | Reason |
-|---|---|---|---|
-
-## Draft Rebuttal Skeleton
-[Concise paragraph/bullet structure, not padded prose.]
-```
-
-## Guardrails
-
-- Do not attack reviewers.
-- Do not overpromise experiments.
-- Do not introduce unsupported claims.
-- If a weakness is legitimate, acknowledge it and scope the claim.
+Planning/handoff artifact only; no experiment execution. Next: research-engineer
+(feasible additions identified) / research-write (prose polish) / research-audit
+(load-bearing weakness needs verification). Carry Prioritized Response Bullets +
+Additions if Allowed forward.

@@ -124,13 +124,24 @@ listed = set(re.findall(r'(?m)^- `([a-z][a-z0-9-]*)` — ', agents))
 stale = sorted(name for name in listed if name not in owned)
 assert not stale, f'AGENTS.md template lists non-owned skills: {stale}'
 
-# 2. Every non-router role skill carries the canonical 5-section template.
+# 2. Every non-router role skill carries the canonical 5-section template,
+#    as an ordered subsequence of its actual ## headings, so each role skill is
+#    a valid loadable re-entry unit (heading order, not just presence). Headings
+#    may carry a parenthetical or em-dash subtitle (e.g. "## Reject when (gates
+#    3,7,8)" or "## Output — three views"), matched at a word boundary.
 required = ['## What & When', '## Procedure', '## Output', '## Reject when', '## State & Handoff']
+def is_section(h, need):
+    return h.startswith(need) and (len(h) == len(need) or not (h[len(need)].isalnum() or h[len(need)] == '_'))
 for f in sorted(Path('skills').glob('research-*/SKILL.md')):
     text = f.read_text()
-    missing = [h for h in required if h not in text]
-    assert not missing, f'{f} missing template headings: {missing}'
-print('PASS: AGENTS.md template skills are owned; role skills use the 5-section template')
+    headings = re.findall(r'^## .+', text, re.M)
+    i = 0
+    for need in required:
+        while i < len(headings) and not is_section(headings[i], need):
+            i += 1
+        assert i < len(headings), f'{f} missing or out-of-order heading: {need}'
+        i += 1
+print('PASS: AGENTS.md template skills are owned; role skills use the ordered 5-section template')
 PY
 
 python3 - <<'PY'
@@ -428,6 +439,52 @@ for f in sorted(Path('skills').glob('research-*/SKILL.md')):
                 dead.append((str(f), rel, str(resolved)))
 assert not dead, f'unresolved depends_on targets: {dead}'
 print(f'PASS: depends_on targets resolve ({checked} checked)')
+PY
+
+python3 - <<'PY'
+# #6: lock the cross-skill ledger contract. The canonical *_state keys are read
+# straight from state-ledger.md (single source of truth): every research-*/SKILL.md
+# may reference only those keys, and each documented producer still names its key.
+# Catches producer-key drift across re-entry hops (the headline contract risk).
+import re
+from pathlib import Path
+
+ledger_doc = Path('skills/coresearch/references/state-ledger.md').read_text()
+m = re.search(r'```yaml\n(.*?)```', ledger_doc, re.S)
+assert m, 'state-ledger.md schema block not found'
+schema = m.group(1)
+doc_top = {ln.split(':', 1)[0] for ln in schema.splitlines() if re.match(r'^[a-z_]+:', ln)}
+canonical = {k for k in doc_top if k.endswith('_state')}
+assert canonical == {'source_state', 'claim_state', 'gap_state',
+                     'hypothesis_state', 'quality_state'}, sorted(canonical)
+
+# skills that write a ledger key must still name it in State & Handoff.
+producers = {
+    'research-survey': 'source_state',
+    'research-audit': 'source_state',
+    'research-gap': 'gap_state',
+    'research-loop': 'hypothesis_state',
+    'research-causal': 'hypothesis_state',
+    'research-dialectic': 'claim_state',
+    'research-verify': 'claim_state',
+    'research-qualitative': 'quality_state',
+    'research-adversary': 'quality_state',
+    'research-review': 'quality_state',
+}
+for skill, key in producers.items():
+    text = (Path('skills') / skill / 'SKILL.md').read_text()
+    assert key in text, f'{skill} State & Handoff dropped canonical ledger key {key}'
+
+# no skill may reference a *_state token outside the canonical set (typos, drift).
+token_re = re.compile(r'\b([a-z][a-z0-9_]*_state)\b')
+bad = []
+for f in sorted(Path('skills').glob('research-*/SKILL.md')):
+    for tok in token_re.finditer(f.read_text()):
+        if tok.group(1) not in canonical:
+            bad.append((str(f), tok.group(1)))
+assert not bad, f'non-canonical ledger *_state tokens in skills: {bad}'
+print(f'PASS: ledger state keys locked to state-ledger.md ({len(canonical)} keys); '
+      f'{len(producers)} producer keys present; no non-canonical *_state tokens')
 PY
 
 gate_tmp="$(mktemp -d)"

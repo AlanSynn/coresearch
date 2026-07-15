@@ -13,11 +13,14 @@ Stdlib only.
 """
 
 import argparse
+import ipaddress
 import json
 import os
 import re
+import socket
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -35,6 +38,58 @@ CITATION_PDF_RE_ALT = re.compile(
     r'<meta\s+[^>]*content=["\']([^"\']+)["\'][^>]*name=["\']citation_pdf_url["\']',
     re.IGNORECASE,
 )
+
+
+# ---------- network safety (SSRF guard) ----------
+
+def _url_is_public(url):
+    """True if url is http(s) and resolves only to public, non-internal IPs.
+
+    Blocks file/gopher/ftp/... schemes and any host that resolves (even partly)
+    to private / loopback / link-local / reserved / multicast / unspecified
+    ranges (169.254.169.254, 127.0.0.1, 10/8, etc.). Threat model: the OA-API
+    JSON fields and publisher citation_pdf_url values we fetch are attacker-
+    influencable, so every fetched URL is checked before connect."""
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        return False
+    host = parsed.hostname
+    if not host:
+        return False
+    try:
+        infos = socket.getaddrinfo(host, None)
+    except socket.gaierror:
+        return False
+    if not infos:
+        return False
+    for _fam, _typ, _proto, _canon, sockaddr in infos:
+        ip = ipaddress.ip_address(sockaddr[0])
+        if (ip.is_private or ip.is_loopback or ip.is_link_local
+                or ip.is_reserved or ip.is_multicast or ip.is_unspecified):
+            return False
+    return True
+
+
+class _SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Refuse to follow a redirect whose target is not a public http(s) URL."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if not _url_is_public(newurl):
+            raise urllib.error.URLError(
+                f"refusing redirect to non-public url: {newurl}"
+            )
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+# One shared opener: redirect targets are validated by _SafeRedirectHandler.
+urllib.request.install_opener(urllib.request.build_opener(_SafeRedirectHandler()))
+
+
+def _assert_public(url):
+    """Validate an about-to-be-fetched URL before connect; raise on internal target."""
+    if not _url_is_public(url):
+        raise urllib.error.URLError(f"refusing non-public url: {url}")
+
 
 # ---------- markdown parsing ----------
 
@@ -99,6 +154,7 @@ def http_json(url, headers=None, timeout=20):
 
 def http_get(url, timeout=60, extra_headers=None):
     """Plain HTTP GET for declared OA URLs. No cookie jar or browser impersonation."""
+    _assert_public(url)
     headers = {
         "User-Agent": UA_DOWNLOAD,
         "Accept": "application/pdf,application/octet-stream,*/*;q=0.5",
@@ -220,7 +276,7 @@ def crossref_doi(title, author_last, year, journal, email):
 
 def arxiv_pdf(title, author_last):
     q = f'ti:"{title[:120]}" AND au:{author_last}'
-    url = "http://export.arxiv.org/api/query?" + urllib.parse.urlencode(
+    url = "https://export.arxiv.org/api/query?" + urllib.parse.urlencode(
         {"search_query": q, "max_results": "3"}
     )
     try:
@@ -307,6 +363,10 @@ def download_pdf(url, dest, depth=0, allow_meta=False):
     """Fetch URL and save if PDF. HTML meta recursion is opt-in."""
     if depth > 2:
         return False, "redirect chain too deep"
+    try:
+        _assert_public(url)
+    except Exception as e:
+        return False, f"unsafe url: {e}"
     try:
         body, hdrs, final = http_get(url, timeout=120)
     except Exception as e:

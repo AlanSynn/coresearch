@@ -115,8 +115,17 @@ install_skill() {
   fi
   mkdir -p "$skill_target"
   if [[ -e "$dst" || -L "$dst" ]]; then
-    if [[ "$FORCE" -eq 1 || -L "$dst" ]]; then
+    if [[ "$FORCE" -eq 1 ]]; then
       rm -rf "$dst"
+    elif [[ -L "$dst" ]]; then
+      local existing_target
+      existing_target="$(symlink_target_abs "$dst" 2>/dev/null || true)"
+      if [[ "$existing_target" == "$ROOT_DIR/skills/"* ]]; then
+        rm -rf "$dst"
+      else
+        echo "Skip existing symlink (points outside Coresearch; use --force to replace): $dst" >&2
+        return
+      fi
     else
       echo "Skip existing skill: $dst (use --force to replace)"
       return

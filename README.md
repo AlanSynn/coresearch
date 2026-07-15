@@ -165,7 +165,9 @@ For normal use, just run:
 harness init
 ```
 
-This opens a small built-in menu, similar to a dropdown. Bare `harness init` defaults to the fast project-start path:
+This opens a small built-in menu, similar to a dropdown. Bare `harness init`
+runs the wizard **only in an interactive shell** (a real TTY on stdin); inside
+the wizard, the default choices are the fast project-start path:
 
 ```text
 target = .
@@ -173,10 +175,14 @@ mode   = full
 action = apply
 ```
 
-Equivalently, when piping answers into the menu, use Enter / `2` / `2`:
+The wizard needs a TTY, so it does not run under piped stdin, `make`, or CI. In
+those non-interactive contexts bare `harness init` falls back to a dry-run
+`bridge` install for `.`. For scripts and CI, pass the intent explicitly instead
+of piping answers:
 
 ```bash
-printf '\n2\n2\n' | harness init
+harness init . --full -y      # apply the full research template
+harness init . -y             # apply a bridge block
 ```
 
 The wizard still prints a diff before writing, creates a backup when replacing an existing file, and refuses to replace an existing `AGENTS.md` in `full` mode unless replacement is explicitly allowed.
@@ -307,7 +313,7 @@ harness self-uninstall                 # remove installed harness command
 harness global                         # dry-run global bridge diff
 harness global -y                      # apply global bridge
 harness global --remove -y             # remove global bridge
-harness init                           # interactive wizard; defaults to . / full / apply
+harness init                           # interactive wizard (TTY only); defaults to . / full / apply
 harness init .                         # dry-run bridge install for explicit target
 harness init . --interactive           # force wizard for a target; defaults to full/apply
 harness init . -y                      # apply bridge to current dir

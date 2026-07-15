@@ -7,13 +7,14 @@ description: OMX-compatible autonomous research mission design for AI, graphics,
 
 Design an artifact-gated research loop: progress is complete only when evidence
 artifacts satisfy explicit validators — not when an agent says it is done. Run
-cumulatively in chat or hand off to OMX `$autoresearch`.
+cumulatively in chat (default); if OMX is installed, optionally hand off
+execution to `$autoresearch`.
 
 ## What & When
 
 Start, steer, or audit autonomous research missions; convert hypotheses into
 artifacts, validators, sandbox limits, stop conditions, OMX handoff contracts;
-choose between `$autoresearch`, `$ralplan`, `$team`, or chat-only execution.
+default to chat-only execution; if OMX is installed, `$autoresearch`, `$ralplan`, and `$team` are optional executors.
 Use when: starting a multi-hypothesis project; turning an idea into experiments
 and stop conditions; creating an OMX mission after `$deep-interview
 --autoresearch`; auditing an existing loop for weak validators, unsafe

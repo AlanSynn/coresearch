@@ -27,6 +27,8 @@ File-format output (`.docx`/`.pdf`/`.pptx`/`.xlsx`/web) is owned by the user via
 
 ## OMX lanes
 
+Optional acceleration when an OMX install is present — owned skills complete standalone without them. Invoke a lane only when its lifecycle matters.
+
 - `$best-practice-research`: upstream docs/practice lookup before architecture choices.
 - `$ralplan`: executable code/system plan with tradeoffs.
 - `$team + $ultragoal`: parallel implementation with durable checkpoints.

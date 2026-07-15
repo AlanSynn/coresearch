@@ -13,8 +13,8 @@ Use when: "design a paper", "clarify contribution", "choose a venue", "plan
 evidence", "build a claim ledger", "outline the paper", "make a venue-aware
 score plan". Field modes: AI/ML/CV, Robotics, Graphics, HCI/UIST/CHI, or
 hybrid. Not for: final prose → `research-write`; verified literature search →
-`research-survey`; implementation or experiment code → `research-engineer` /
-`$ralplan`.
+`research-survey`; implementation or experiment code → `research-engineer`
+(or `$ralplan` if OMX is installed).
 
 ## Procedure
 
@@ -66,8 +66,9 @@ Inputs: target venue(s); abstract/notes/draft/figures/results/code/system;
 evidence available + planned; constraints (deadline, page limit, anonymity,
 available experiments). Ask at most one clarifying question if target venue or
 central artifact is impossible to infer; otherwise state assumptions and
-proceed. Next: executable implementation plan → `$ralplan` (OMX) or a native
-executor / chat-only plan if OMX is absent; autonomous experiment steering →
-`research-loop` / `$autoresearch` (OMX) after the contract is clear.
+proceed. Next: executable implementation plan → native executor / chat-only
+plan (default), or `$ralplan` if OMX is installed; autonomous experiment
+steering → `research-loop` (default) / `$autoresearch` if OMX is installed,
+after the contract is clear.
 
 Re-entry: return to `coresearch` to re-route the next stage.

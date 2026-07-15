@@ -60,7 +60,7 @@ Use this as the first-stop router for research work. Keep it small: classify sta
 - Final line edit → `research-proofread`.
 - Talks/slides plan → `research-slides`.
 - Code/experiments/artifact release → `research-engineer`.
-- Hypotheses/validators/autonomous loop design → `research-loop`; execute with `$autoresearch` only after validator mode exists.
+- Hypotheses/validators/autonomous loop design → `research-loop` (standalone mission contract; `$autoresearch` execution is optional, only when OMX is installed and validator mode exists).
 - Experiment scope split (when two apply): which evidence supports each claim (plan) → `research-design`; hypotheses/validators/stop-conditions → `research-loop`; implement the experiment code → `research-engineer`.
 - Literature gap / next paper / "is this novel" / where are contradictions → `research-gap`.
 - Why papers disagree + a reconciling mechanism → `research-dialectic`.

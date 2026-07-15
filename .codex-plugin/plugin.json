@@ -1,7 +1,7 @@
 {
   "name": "coresearch",
   "version": "1.0.0",
-  "description": "Central Coresearch router plus OMX-compatible research-agent skills for paper design, review, surveys, rebuttals, autonomous loops, claim verification, reproducible engineering, figures, slides, and academic-argument PPTX decks.",
+  "description": "Central Coresearch router plus OMX-compatible research-agent skills for paper design, review, surveys, rebuttals, autonomous loops, claim verification, reproducible engineering, figures, and slides.",
   "author": {
     "name": "Alan Synn"
   },
@@ -17,14 +17,13 @@
     "reproducibility",
     "research",
     "review",
-    "venue-fit",
-    "pptx"
+    "venue-fit"
   ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Coresearch",
     "shortDescription": "Coresearch router plus research planning, writing, review, and reproducibility skills.",
-    "longDescription": "A lean, cumulative Codex/OMX research-agent bundle for AI/ML/CV, Graphics/Visual Computing, Robotics, HCI, and hybrid research work. The coresearch router chooses the right stage, field mode, and role skill, then routes to complete skills for paper design, review, rewriting, related work, rebuttals, autonomous research loops, claim verification, research engineering, figures, slides, and PPTX deck mechanics via the Claude pptx companion. It avoids shim aliases and forced .agents chat folders, and uses .omx state only for explicit OMX workflows.",
+    "longDescription": "A lean, cumulative Codex/OMX research-agent bundle for AI/ML/CV, Graphics/Visual Computing, Robotics, HCI, and hybrid research work. The coresearch router chooses the right stage, field mode, and role skill, then routes to complete skills for paper design, review, rewriting, related work, rebuttals, autonomous research loops, claim verification, research engineering, figures, and slides. It runs standalone; optional OMX acceleration ($autoresearch, $team, $ralplan) is available when an OMX install is present. It avoids shim aliases and forced .agents chat folders, and uses .omx state only for explicit OMX workflows.",
     "developerName": "Alan Synn",
     "category": "Productivity",
     "capabilities": [
@@ -34,8 +33,8 @@
     "defaultPrompt": [
       "Use Coresearch to design this paper for CHI reviewers.",
       "Review this draft for NeurIPS readiness.",
-      "Create an OMX autoresearch mission for this experiment idea.",
-      "Create an academic-argument PPTX deck from this talk plan."
+      "Design an autonomous research loop for this experiment idea.",
+      "Plan a conference talk from these results."
     ]
   }
 }

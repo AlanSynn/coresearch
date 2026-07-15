@@ -93,92 +93,16 @@
       "group": "verify"
     }
   ],
-  "companions": [
-    {
-      "name": "academic-ppt",
-      "reason": "source-faithful academic .pptx from LaTeX/PDF, equations, defense/source-fidelity workflows; optional companion when source fidelity matters more than general PowerPoint mechanics"
-    },
-    {
-      "name": "pptx",
-      "reason": "Claude PowerPoint mechanics engine; route finished .pptx build/render/QA here after research-slides defines the claim-faithful brief"
-    },
-    {
-      "name": "docx",
-      "reason": "Word document IO/editing; route only when .docx involved"
-    },
-    {
-      "name": "pdf",
-      "reason": "generic PDF processing; open-access literature fetch lives in research-survey's crawler"
-    },
-    {
-      "name": "xlsx",
-      "reason": "spreadsheet data/analysis artifacts"
-    },
-    {
-      "name": "frontend-design",
-      "reason": "research demo UI and web artifact polish"
-    },
-    {
-      "name": "web-artifacts-builder",
-      "reason": "shareable web demos/artifacts"
-    },
-    {
-      "name": "frontend-skill",
-      "reason": "Codex frontend/UI skill for research demos; route only when UI deliverable exists"
-    }
-  ],
-  "preferences": [
-    "caveman",
-    "cavecrew",
-    "caveman-commit",
-    "caveman-compress",
-    "caveman-help",
-    "caveman-review",
-    "caveman-stats",
-    "ponytail",
-    "ponytail-audit",
-    "ponytail-debt",
-    "ponytail-gain",
-    "ponytail-help",
-    "ponytail-review"
-  ],
   "external_routes": [
-    "autoresearch",
-    "autoresearch-goal",
-    "best-practice-research",
-    "plan",
-    "ralplan",
-    "ralph",
-    "ultragoal",
-    "team",
-    "swarm",
-    "ultrawork",
-    "ultraqa",
-    "analyze",
-    "design",
-    "code-review",
-    "security-review",
-    "visual-verdict",
-    "visual-ralph",
-    "token-router",
-    "performance-goal",
-    "ai-slop-cleaner",
-    "ask",
-    "ask-claude",
-    "ask-gemini",
     "autopilot",
-    "cancel",
-    "configure-notifications",
+    "autoresearch",
+    "best-practice-research",
     "deep-interview",
-    "doctor",
-    "help",
-    "hud",
-    "note",
-    "pipeline",
-    "prometheus-strict",
-    "skill",
-    "trace",
-    "wiki",
-    "omx-setup"
+    "ralph",
+    "ralplan",
+    "swarm",
+    "team",
+    "ultragoal",
+    "ultraqa"
   ]
 }

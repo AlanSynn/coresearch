@@ -14,7 +14,7 @@ Teasers, pipelines, representations, comparison figures, ablation plots, result
 galleries, failure cases, study figures, tables, and captions. Use when: "what
 figures does this paper need", "improve these figures", "design the pipeline
 diagram / result gallery / ablation table / teaser", "write captions". Not for:
-slide-deck structure → research-slides.
+slide-deck structure (user-owned via external tools).
 
 ## Procedure
 
@@ -70,7 +70,7 @@ and `Reviewer question answered` — none bound means decoration; cut or rebind.
 ## State & Handoff
 
 State: plan marked `planned`; Missing Assets are build blockers. Next: plotting
-or repo-native implementation once approved; research-slides (deck structure);
+or repo-native implementation once approved;
 research-audit (claim↔figure alignment). Artifacts: Figure Plan md above.
 Carry forward Missing Assets and Risks as warnings.
 

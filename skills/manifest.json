@@ -73,11 +73,6 @@
       "group": "manuscript"
     },
     {
-      "name": "research-slides",
-      "role": "slides",
-      "group": "output"
-    },
-    {
       "name": "research-verify",
       "role": "verify",
       "group": "verify"

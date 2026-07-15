@@ -11,7 +11,7 @@ Use this as the first-stop router for research work. Keep it small: classify sta
 
 - Broad research requests where the right role skill is unclear.
 - Starting or re-scoping AI, Graphics, Robotics, HCI, or hybrid research projects.
-- Choosing between paper design, writing, review, survey, figures, engineering, rebuttal, verification, slides, and autonomous-loop work.
+- Choosing between paper design, writing, review, survey, figures, engineering, rebuttal, verification, and autonomous-loop work.
 
 ## Must do
 
@@ -58,7 +58,6 @@ Use this as the first-stop router for research work. Keep it small: classify sta
 - Venue review/score forecast → `research-review`.
 - Rebuttal/discussion response → `research-rebuttal`.
 - Final line edit → `research-proofread`.
-- Talks/slides plan → `research-slides`.
 - Code/experiments/artifact release → `research-engineer`.
 - Hypotheses/validators/autonomous loop design → `research-loop` (standalone mission contract; `$autoresearch` execution is optional, only when OMX is installed and validator mode exists).
 - Experiment scope split (when two apply): which evidence supports each claim (plan) → `research-design`; hypotheses/validators/stop-conditions → `research-loop`; implement the experiment code → `research-engineer`.

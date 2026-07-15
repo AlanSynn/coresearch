@@ -12,7 +12,6 @@ Pick one primary skill.
 - `research-proofread`: final grammar/LaTeX/notation pass.
 - `research-verify`: citation, number, source-faithfulness audit.
 - `research-rebuttal`: reviewer response strategy.
-- `research-slides`: talk/deck outline and slide text.
 - `research-engineer`: research code, experiments, datasets, benchmarks, artifact release.
 - `research-loop`: hypotheses, validators, sandbox, `$autoresearch` mission design.
 - `research-survey` owns open-access PDF batch download via its in-skill crawler.

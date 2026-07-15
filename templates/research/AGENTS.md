@@ -78,7 +78,6 @@ Canonical Coresearch skill names:
 - `research-proofread` — final line-level grammar, notation, LaTeX, and consistency pass.
 - `research-engineer` — reproducible experiments, analyses, datasets, systems, benchmarks, and artifact release.
 - `research-loop` — OMX-compatible autonomous research mission and validator loop design.
-- `research-slides` — academic talk/deck structure and slide content.
 
 The analytical reasoning set (`research-gap`, `-dialectic`, `-causal`, `-qualitative`, `-audit`, `-adversary`) is also Coresearch-owned; `coresearch` routes to them by default and `reasoning-skills.md` sequences them.
 

@@ -91,7 +91,10 @@ assert all((Path('skills', name) / '_coresearch').exists() for name in expected)
 assert 'aliases' not in skill_manifest
 assert 'companions' not in skill_manifest, 'file-format companions purged; user invokes external format tools directly'
 assert 'preferences' not in skill_manifest, 'caveman/ponytail inlined into owned omx-pony-caveman.md'
-assert set(skill_manifest.get('external_routes', []))
+assert set(skill_manifest.get('external_routes', [])) == {
+    'autopilot', 'autoresearch', 'best-practice-research', 'deep-interview',
+    'ralph', 'ralplan', 'swarm', 'team', 'ultragoal', 'ultraqa',
+}, 'external_routes must be exactly the 10 optional OMX acceleration lanes (single-source policy)'
 
 skills = []
 for f in sorted(Path('skills').glob('*/SKILL.md')):

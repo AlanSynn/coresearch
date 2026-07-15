@@ -6,7 +6,7 @@ description: Verified literature survey and related-work synthesis for research 
 # research-survey — Literature Survey & Related Work
 
 Find, verify, classify, synthesize real papers — real papers, not inferred
-papers. Default is an in-chat Markdown survey; LaTeX/BibTeX/PDF only on request.
+papers. Default is an in-chat Markdown survey; LaTeX/BibTeX only on request.
 
 ## What & When
 

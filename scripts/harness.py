@@ -659,7 +659,6 @@ def iter_skill_dirs(root: Path, *, recursive: bool) -> list[Path]:
 
 def classify_skill(name: str, surface: str, manifest: dict, skill_dir: Path) -> str:
     owned = {item["name"] for item in manifest["owned"]}
-    companions = {item["name"] for item in manifest.get("companions", [])}
     external = set(manifest.get("external_routes", []))
     preferences = set(manifest.get("preferences", []))
     plugin_surface = surface in {"codex-cache", "claude-marketplace", "claude-cache"}
@@ -681,8 +680,6 @@ def classify_skill(name: str, surface: str, manifest: dict, skill_dir: Path) -> 
         return "plugin-overlap" if plugin_surface else "owned"
     if name.startswith(("coresearch", "research-")):
         return "plugin-overlap" if plugin_surface else "owned-unmarked"
-    if name in companions:
-        return "companion"
     if name in preferences or name.startswith(("caveman", "ponytail")) or name == "cavecrew":
         return "preference"
     if name in external or name.startswith("omx-"):

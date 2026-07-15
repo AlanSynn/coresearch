@@ -80,6 +80,8 @@ Canonical Coresearch skill names:
 - `research-loop` — OMX-compatible autonomous research mission and validator loop design.
 - `research-slides` — academic talk/deck structure and slide content.
 
+The analytical reasoning set (`research-gap`, `-dialectic`, `-causal`, `-qualitative`, `-audit`, `-adversary`) is also Coresearch-owned; `coresearch` routes to them by default and `reasoning-skills.md` sequences them.
+
 If multiple skills apply, load the smallest set and state the order once.
 
 No shim aliases are managed by this harness. Use canonical `coresearch` and `research-*` names. File-format output (`.pptx`/`.docx`/`.xlsx`/web) is produced by the user with external tools; Coresearch owns research content, not format mechanics. Open-access PDF batch download lives in `research-survey`'s in-skill crawler.

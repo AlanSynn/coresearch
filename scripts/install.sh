@@ -274,6 +274,14 @@ else
   fi
 fi
 
+if [[ "$GLOBAL_BRIDGE" -eq 1 || "$PROJECT_BRIDGE" -eq 1 ]]; then
+  if command -v omx >/dev/null 2>&1; then
+    echo "omx detected: OMX-aware bridge will be applied."
+  else
+    echo "INFO omx not detected; bridge assumes omx (oh-my-codex). Install via npm/bun then 'omx setup'. Applying anyway (--bridge requested)."
+  fi
+fi
+
 if [[ "$GLOBAL_BRIDGE" -eq 1 ]]; then
   upsert_bridge "$CODEX_HOME_DIR/AGENTS.md"
 fi

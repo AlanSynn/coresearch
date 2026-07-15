@@ -346,6 +346,24 @@ grep -q 'RESEARCH_AGENT_SKILLS:START' "$target_override_b/AGENTS.md" || fail "--
 grep -qF "$BRIDGE_HANDOFF_LINE" "$target_override_b/AGENTS.md" || fail "--target override bridge missing subagent handoff line"
 pass "harness init shorthand/target-override bridge dry/apply/idempotent"
 
+# omx-conditional bridge: default bridges when omx present; CORESEARCH_OMX_CHECK=0 seam skips when absent; --bridge forces.
+omx_present_default="$(mktemp -d)"
+./harness init "$omx_present_default" -y </dev/null >/tmp/research-skills-harness-init-omx-present.txt
+grep -q 'omx detected' /tmp/research-skills-harness-init-omx-present.txt || fail "harness init default did not report omx detection"
+grep -q 'RESEARCH_AGENT_SKILLS:START' "$omx_present_default/AGENTS.md" || fail "harness init default did not bridge when omx present"
+
+omx_absent_default="$(mktemp -d)"
+CORESEARCH_OMX_CHECK=0 ./harness init "$omx_absent_default" -y </dev/null >/tmp/research-skills-harness-init-omx-absent.txt
+grep -q 'omx not detected' /tmp/research-skills-harness-init-omx-absent.txt || fail "harness init absent-default did not notify omx absent"
+grep -q 'Skipping OMX-aware bridge' /tmp/research-skills-harness-init-omx-absent.txt || fail "harness init absent-default did not skip bridge"
+[[ ! -f "$omx_absent_default/AGENTS.md" ]] || fail "harness init absent-default wrote AGENTS.md (should skip)"
+
+omx_absent_force="$(mktemp -d)"
+CORESEARCH_OMX_CHECK=0 ./harness init "$omx_absent_force" --bridge -y </dev/null >/tmp/research-skills-harness-init-omx-force.txt
+grep -q 'INFO omx not detected' /tmp/research-skills-harness-init-omx-force.txt || fail "harness init absent-force did not emit INFO"
+grep -q 'RESEARCH_AGENT_SKILLS:START' "$omx_absent_force/AGENTS.md" || fail "harness init absent-force did not bridge (--bridge must force)"
+pass "harness init omx-conditional bridge: present/default bridges, absent/default skips, absent/--bridge forces"
+
 noninteractive_init="$(mktemp -d)"
 printf 'ORIGINAL\n' > "$noninteractive_init/AGENTS.md"
 (cd "$noninteractive_init" && "$ROOT_DIR/harness" init </dev/null) >/tmp/research-skills-harness-init-nontty.txt

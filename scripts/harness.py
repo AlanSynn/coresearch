@@ -232,6 +232,43 @@ def explicit_init_mode(args: argparse.Namespace) -> str | None:
     return None
 
 
+INSTALL_HINT = """omx not detected on PATH. The OMX-aware bridge assumes omx (oh-my-codex).
+Install omx via your preferred package manager, e.g.:
+  npm:   npm install -g oh-my-codex
+  bun:   bun install -g oh-my-codex
+then run `omx setup`. See omx's own docs for other channels.
+In this Claude session you can run a command with a leading `!` (e.g. `! npm i -g oh-my-codex`).
+After installing, re-run `harness init` to apply the OMX-aware bridge.
+Bridge skipped for now -- Coresearch runs standalone without omx."""
+
+
+def omx_available() -> bool:
+    """True iff a usable `omx` is on PATH. CORESEARCH_OMX_CHECK=0 forces False (test seam)."""
+    if os.environ.get("CORESEARCH_OMX_CHECK", "1") == "0":
+        return False
+    return bool(shutil.which("omx"))
+
+
+def should_apply_bridge(*, force: bool) -> bool:
+    """Decide whether to write the OMX-aware bridge. omx present or explicit force -> apply;
+    otherwise notify (and, on a TTY, offer to install omx) and skip. Prints its own messages."""
+    if omx_available():
+        print("omx detected on PATH; OMX-aware bridge will be used.")
+        return True
+    if force:
+        print("INFO omx not detected; using bridge anyway (explicit --bridge/--global-bridge).")
+        return True
+    print("omx not detected on PATH.")
+    if sys.stdin.isatty():
+        if prompt_bool("Install omx (oh-my-codex) to enable OMX acceleration?", False):
+            print(INSTALL_HINT)
+        else:
+            print("Skipping OMX-aware bridge. Coresearch runs standalone.")
+        return False
+    print("Skipping OMX-aware bridge (omx not detected). Install omx (oh-my-codex) to enable it.")
+    return False
+
+
 def apply_interactive_init(args: argparse.Namespace) -> None:
     print("# Interactive project setup")
     target = prompt_text("Target directory", arg_target(args))
@@ -391,6 +428,10 @@ def cmd_init(args: argparse.Namespace) -> int:
     if should_interactive_init(args):
         apply_interactive_init(args)
 
+    # omx-conditional bridge: skip the OMX-aware bridge when omx is absent unless --bridge forces it.
+    if args.mode == "bridge" and not should_apply_bridge(force=explicit_init_mode(args) == "bridge"):
+        return 0
+
     target = Path(arg_target(args)).expanduser().resolve()
     if not target.exists():
         if args.apply:
@@ -438,6 +479,8 @@ def cmd_global(args: argparse.Namespace) -> int:
     home = codex_home(args.codex_home)
     path = home / "AGENTS.md"
     old = path.read_text() if path.exists() else ""
+    if not args.remove and not should_apply_bridge(force=True):
+        return 0
     new = remove_bridge_text(old) if args.remove else upsert_bridge_text(old)
     label = "remove-bridge" if args.remove else "bridge"
     diff = unified_diff(old, new, str(path) + " (current)", str(path) + f" ({label})")

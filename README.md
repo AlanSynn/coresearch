@@ -205,6 +205,8 @@ No extra Python packages are required. In scripts or CI, use the explicit flags 
 
 Use this for most research repos. It preserves any existing project `AGENTS.md` and adds a small research bridge block.
 
+The bridge is **omx-conditional**: `harness init` applies the OMX-aware bridge when `omx` is detected on PATH; if `omx` is absent it skips the bridge (Coresearch runs standalone), notifies you, and — in an interactive terminal — offers to install `omx` (`oh-my-codex`, via npm/bun/your package manager). Pass `--bridge` to force the bridge regardless of omx.
+
 ```bash
 cd /path/to/research-repo
 harness init . --bridge      # dry-run diff

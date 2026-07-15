@@ -1,6 +1,6 @@
 # Field Modes and Narrative Spines
 
-Use this when routing `research-design`, `research-write`, `research-review`, `research-figures`, or `research-engineer`. Pick one primary mode and, when needed, one secondary mode.
+Use this when routing `research-design`, `research-write`, `research-review`, or `research-engineer`. Pick one primary mode and, when needed, one secondary mode.
 
 ## AI / ML / CV — technical systems mode
 

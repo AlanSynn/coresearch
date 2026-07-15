@@ -17,7 +17,7 @@ papers. Use when: "review", "critique", "score", "triage", "forecast acceptance"
 "identify acceptance risks", "simulate reviewers", "assess submission readiness";
 finding score-moving evidence gaps and rewrite priorities.
 
-Not for: grammar polish → research-proofread; replacement prose → research-write;
+Not for: replacement prose → research-write;
 citation/source faithfulness → research-verify.
 
 Inputs: manuscript text, figures, captions, supplement, code, results, author
@@ -77,9 +77,7 @@ Mandatory fields:
 ## State & Handoff
 
 State: review produced; score-moving evidence gaps block OMX completion until
-closed. Next: research-write (revision prose) / research-verify (citation
-faithfulness) / research-audit (methodology attack) / research-proofread (final
-polish). Carry forward variance and unanswered author-questions as warnings. In
+closed. Next: research-write (revision prose) / research-verify (citation faithfulness) / research-audit (methodology attack). Carry forward variance and unanswered author-questions as warnings. In
 a multi-skill run, also seed `quality_state` (unsupported_claims /
 missing_counterevidence / unresolved_methodology_issues) from the score-moving
 gaps (state-ledger.md); standalone, the review above is enough.

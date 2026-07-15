@@ -11,12 +11,12 @@ Use this as the first-stop router for research work. Keep it small: classify sta
 
 - Broad research requests where the right role skill is unclear.
 - Starting or re-scoping AI, Graphics, Robotics, HCI, or hybrid research projects.
-- Choosing between paper design, writing, review, survey, figures, engineering, rebuttal, verification, and autonomous-loop work.
+- Choosing between paper design, writing, review, survey, engineering, rebuttal, verification, and autonomous-loop work.
 
 ## Must do
 
 - Pick one primary research stage and one primary skill.
-- Select a field mode when design, writing, review, figures, or engineering quality depends on AI / Robotics / Graphics / HCI norms.
+- Select a field mode when design, writing, review, or engineering quality depends on AI / Robotics / Graphics / HCI norms.
 - Keep `coresearch` as a central triage unit: route, load only needed references, hand off, then re-enter on the next stage.
 - Preserve evidence discipline: separate fact, inference, recommendation, and unknown.
 
@@ -28,7 +28,7 @@ Use this as the first-stop router for research work. Keep it small: classify sta
 
 ## Quick workflow
 
-1. Identify research stage: intake, idea, survey, design, prototype, evidence, figures, manuscript, review, rebuttal, release.
+1. Identify research stage: intake, idea, survey, design, prototype, evidence, manuscript, review, rebuttal, release.
 2. Pick the smallest role skill from the catalog.
 3. Pick field mode: AI / Robotics / Graphics / HCI / hybrid.
 4. Load only the needed reference below.
@@ -51,13 +51,11 @@ Use this as the first-stop router for research work. Keep it small: classify sta
 ## Default routes
 
 - Paper idea/contribution/evidence plan, or venue choice/strategy (which venue fits this work) → `research-design`.
-- Figures/tables/captions → `research-figures`.
 - Related work/literature map → `research-survey`.
 - Source/citation/fact check → `research-verify`.
 - Section rewrite → `research-write`.
 - Venue review/score forecast → `research-review`.
 - Rebuttal/discussion response → `research-rebuttal`.
-- Final line edit → `research-proofread`.
 - Code/experiments/artifact release → `research-engineer`.
 - Hypotheses/validators/autonomous loop design → `research-loop` (standalone mission contract; `$autoresearch` execution is optional, only when OMX is installed and validator mode exists).
 - Experiment scope split (when two apply): which evidence supports each claim (plan) → `research-design`; hypotheses/validators/stop-conditions → `research-loop`; implement the experiment code → `research-engineer`.

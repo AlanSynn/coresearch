@@ -6,10 +6,8 @@ Pick one primary skill.
 
 - `research-design`: contribution, claim ledger, evidence plan, venue strategy.
 - `research-survey`: verified papers, related-work map, novelty risk.
-- `research-figures`: figure/table/caption architecture.
 - `research-write`: rewrite supplied manuscript text without inventing claims.
 - `research-review`: simulated venue review, score, blockers.
-- `research-proofread`: final grammar/LaTeX/notation pass.
 - `research-verify`: citation, number, source-faithfulness audit.
 - `research-rebuttal`: reviewer response strategy.
 - `research-engineer`: research code, experiments, datasets, benchmarks, artifact release.

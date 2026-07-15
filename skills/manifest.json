@@ -43,11 +43,6 @@
       "group": "build"
     },
     {
-      "name": "research-figures",
-      "role": "figures",
-      "group": "evidence"
-    },
-    {
       "name": "research-qualitative",
       "role": "qualitative",
       "group": "evidence"
@@ -60,11 +55,6 @@
     {
       "name": "research-review",
       "role": "review",
-      "group": "manuscript"
-    },
-    {
-      "name": "research-proofread",
-      "role": "proofread",
       "group": "manuscript"
     },
     {

@@ -74,8 +74,6 @@ Canonical Coresearch skill names:
 - `research-survey` — verified related-work discovery and synthesis.
 - `research-rebuttal` — score-moving response strategy from reviews.
 - `research-verify` — factual/citation/numerical/source-faithfulness audit.
-- `research-figures` — claim-supporting figure, table, and caption plans.
-- `research-proofread` — final line-level grammar, notation, LaTeX, and consistency pass.
 - `research-engineer` — reproducible experiments, analyses, datasets, systems, benchmarks, and artifact release.
 - `research-loop` — OMX-compatible autonomous research mission and validator loop design.
 

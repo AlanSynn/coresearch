@@ -16,7 +16,7 @@ contribution bullets — matching each field's narrative while preserving author
 intent and supplied evidence. Use when: "rewrite this section", "tighten the
 argument", "make reviewer-ready", "explain a concept / decompose a mechanism".
 Not for: inventing results/citations/participants/datasets/baselines/novelty;
-acceptance scoring → research-review; final typo-only pass → research-proofread.
+acceptance scoring → research-review.
 
 ## Procedure
 
@@ -90,8 +90,6 @@ claims beyond supplied evidence. Emit as prose, then the same diagnostics.
 ## State & Handoff
 
 State: rewritten text carries inline diagnostics; softened/scoped claims flagged
-for author confirmation; evidence-still-needed tracked. Next: research-proofread
-(typo-only pass) / research-review (venue-fit + scoring) / research-audit
-(softened claim needs methodology backing). Artifacts: section md + diagnostics.
+for author confirmation; evidence-still-needed tracked. Next: research-review (venue-fit + scoring) / research-audit (softened claim needs methodology backing). Artifacts: section md + diagnostics.
 
 Re-entry: return to `coresearch` to re-route the next stage.

@@ -2,7 +2,7 @@
 
 ## Owned by Coresearch harness
 
-`coresearch`, `research-design`, `research-survey`, `research-loop`, `research-gap`, `research-dialectic`, `research-causal`, `research-engineer`, `research-figures`, `research-qualitative`, `research-write`, `research-review`, `research-proofread`, `research-rebuttal`, `research-verify`, `research-audit`, `research-adversary`.
+`coresearch`, `research-design`, `research-survey`, `research-loop`, `research-gap`, `research-dialectic`, `research-causal`, `research-engineer`, `research-qualitative`, `research-write`, `research-review`, `research-rebuttal`, `research-verify`, `research-audit`, `research-adversary`.
 
 ## Shared evidence infrastructure (one file per skill)
 

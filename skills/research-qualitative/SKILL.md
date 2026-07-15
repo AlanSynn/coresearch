@@ -68,7 +68,7 @@ Confidence three-dim per theme; coverage usually the binding dimension.
 
 ## State & Handoff
 
-State: ledger codebook + themes written; unsupported design claims to
+State: artifacts (codebook.yaml, themes.md) written; unsupported design claims to
 `quality_state.unresolved_methodology_issues`; saturation limits logged. Next:
 research-adversary (challenge themes) / research-dialectic (conflict with
 literature). Artifacts: codebook.yaml +

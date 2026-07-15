@@ -69,7 +69,9 @@ Confidence: three-dim per evidence-grounding.md.
 
 ## State & Handoff
 
-State: writes ledger `gap_state.{candidates,falsified,surviving}`; no regenerate
+State: reads `hypothesis_state.unidentifiable` (from research-causal) and
+`source_state.state = audited` (from research-audit) to seed and revise gaps;
+writes ledger `gap_state.{candidates,falsified,surviving}`; no regenerate
 of a falsified gap without new evidence. Next: research-dialectic (active
 disagreement) / research-causal (mechanism) / research-audit (load-bearing
 papers). Artifacts: gap-report.md + evidence/*.yaml. Carry forward coverage blind

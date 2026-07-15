@@ -51,7 +51,8 @@ Use Team for parallel lanes with disjoint write scopes. Use Ultragoal as durable
 
 ## Re-entry to coresearch
 
-OMX lanes (`$autoresearch`, `$ralplan`, `$team`, `$ultragoal`) and native
+OMX lanes (the full set is in [routing.md](routing.md) §OMX lanes; e.g.
+`$autoresearch`, `$ralplan`, `$team`, `$ultragoal`, `$deep-interview`) and native
 subagents are executors, not routers. On terminal — or when a research stage
 follows their output — re-enter `coresearch` to re-classify and route the next
 stage. Example: `$autoresearch` terminal → `coresearch` → `research-write`

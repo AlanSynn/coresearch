@@ -102,7 +102,11 @@ def parse_md_tables(text):
             state = "out"
             continue
         if state == "out":
-            state = "target" if ("제목" in s and "저자" in s and "저널" in s) else "other"
+            s_lower = s.lower()
+            has_title = "제목" in s or "title" in s_lower
+            has_authors = "저자" in s or "author" in s_lower
+            has_journal = "저널" in s or "journal" in s_lower or "venue" in s_lower
+            state = "target" if (has_title and has_authors and has_journal) else "other"
             continue
         if re.match(r"^\|[\s\-:|]+\|?$", s):
             continue
@@ -458,6 +462,10 @@ def crawl(md_path, email, dry_run=False, limit=None, allow_publisher_pdf=False, 
     text = md_path.read_text(encoding="utf-8")
     rows = parse_md_tables(text)
     pdf_dir = md_path.parent / "pdf"
+    if not rows:
+        print("[pdf_crawl] no roadmap table found — expected a markdown table whose "
+              "header row contains 제목/저자/저널 (or title/authors/journal). Nothing to do.")
+        return
     if not dry_run:
         pdf_dir.mkdir(exist_ok=True)
 

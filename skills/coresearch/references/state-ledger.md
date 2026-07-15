@@ -17,7 +17,7 @@ completed_skills: [string]
 active_skill: string
 blocked_by: [{ skill, reason }]
 source_state:        # per source_id
-  - { id, state: retrieved|screened|fully_read|audited|missing, evidence_level }
+  - { id, state: retrieved|screened|fully_read|audited|missing, notes }
 claim_state:         # per claim_id
   - { id, state: supported|contradicted|unresolved|rejected, confidence }
 gap_state:

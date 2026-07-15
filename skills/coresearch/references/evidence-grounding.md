@@ -63,10 +63,11 @@ summaries, blog restatements.
 
 Reading-depth evidence level (carry forward on each evidence object): `PDF_VERIFIED`
 (full-text primary in hand) > `ABSTRACT_ONLY` > `INDEX_ONLY`. A claim's confidence
-may not exceed the level of its weakest supporting source. research-survey uses a
-separate **verification status** (retrieval fidelity: PDF / FULL TEXT / METADATA /
-PARTIALLY VERIFIED, NOT FOUND); map PDF or FULL TEXT VERIFIED → `PDF_VERIFIED`,
-METADATA VERIFIED → `INDEX_ONLY`, anything lower → uncitable.
+may not exceed the level of its weakest supporting source. research-survey emits a
+**verification status** (PDF / FULL TEXT / METADATA / PARTIALLY VERIFIED / NOT
+FOUND); the canonical map from verification status to `source_state.state` lives in
+[state-ledger.md](state-ledger.md) §Mapping — read it there, do not re-derive a
+parallel mapping here.
 
 **Primary-source verification required** when the claim is central / surprising /
 quantitative / causal / establishes novelty / criticizes prior work.

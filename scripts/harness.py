@@ -5,6 +5,7 @@ import argparse
 import difflib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -86,20 +87,47 @@ def unified_diff(old: str, new: str, fromfile: str, tofile: str) -> str:
     return "".join(difflib.unified_diff(old.splitlines(True), new.splitlines(True), fromfile=fromfile, tofile=tofile))
 
 
+BACKUP_KEEP = 8
+
+
+def _backup_index(path: Path) -> int:
+    m = re.search(r"\.bak\.(\d+)$", path.name)
+    return int(m.group(1)) if m else -1
+
+
+def atomic_write(path: Path, text: str) -> None:
+    """Write via a temp file + os.replace so an interrupt never truncates the target."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".{path.name}.tmp.{os.getpid()}")
+    tmp.write_text(text)
+    os.replace(tmp, path)
+
+
 def backup_file(path: Path) -> Path | None:
     if not path.exists():
         return None
     idx = 1
-    while True:
-        candidate = path.with_name(f"{path.name}.bak.{idx}")
-        if not candidate.exists():
-            shutil.copy2(path, candidate)
-            return candidate
+    while path.with_name(f"{path.name}.bak.{idx}").exists():
         idx += 1
+    candidate = path.with_name(f"{path.name}.bak.{idx}")
+    shutil.copy2(path, candidate)
+    # Prune oldest beyond the retention cap so re-runs do not accumulate backups.
+    backups = sorted(
+        (p for p in path.parent.glob(f"{path.name}.bak.*") if p.exists()),
+        key=_backup_index,
+    )
+    for stale in backups[:-BACKUP_KEEP]:
+        stale.unlink(missing_ok=True)
+    return candidate
 
 
 def latest_backup(path: Path) -> Path | None:
-    candidates = sorted(path.parent.glob(f"{path.name}.bak.*"), key=lambda p: p.stat().st_mtime if p.exists() else 0)
+    """Newest backup by sequence index, not mtime — copy2 preserves source mtime,
+    so mtime ordering can return the current content and make rollback a no-op."""
+    candidates = sorted(
+        (p for p in path.parent.glob(f"{path.name}.bak.*") if p.exists()),
+        key=_backup_index,
+    )
     return candidates[-1] if candidates else None
 
 
@@ -351,6 +379,9 @@ def cmd_self_uninstall(args: argparse.Namespace) -> int:
         print(f"Refusing to remove non-research-harness command: {dst}", file=sys.stderr)
         print("Use --force if you intentionally want to remove it.", file=sys.stderr)
         return 3
+    if dst.is_dir() and not dst.is_symlink():
+        print(f"Refusing to remove directory: {dst}", file=sys.stderr)
+        return 3
     dst.unlink()
     print(f"Removed: {dst}")
     return 0
@@ -393,8 +424,10 @@ def cmd_init(args: argparse.Namespace) -> int:
         print("\nDry run only. Re-run with --apply to write changes.")
         return 0
 
+    if not diff:
+        return 0
     backup = backup_file(path)
-    path.write_text(new)
+    atomic_write(path, new)
     print(f"\nWrote: {path}")
     if backup:
         print(f"Backup: {backup}")
@@ -419,8 +452,10 @@ def cmd_global(args: argparse.Namespace) -> int:
         print("\nDry run only. Re-run with --apply to write changes.")
         return 0
     home.mkdir(parents=True, exist_ok=True)
+    if not diff:
+        return 0
     backup = backup_file(path)
-    path.write_text(new)
+    atomic_write(path, new)
     print(f"\nWrote: {path}")
     if backup:
         print(f"Backup: {backup}")
@@ -449,8 +484,10 @@ def cmd_rollback(args: argparse.Namespace) -> int:
     if not args.apply:
         print("\nDry run only. Re-run with --apply to restore backup.")
         return 0
+    if not diff:
+        return 0
     pre_restore = backup_file(path)
-    path.write_text(new)
+    atomic_write(path, new)
     print(f"\nRestored: {path}")
     if pre_restore:
         print(f"Pre-restore backup: {pre_restore}")
@@ -562,6 +599,12 @@ def cmd_status(args: argparse.Namespace) -> int:
     print("Installed research skills:")
     for row in skill_status(home):
         print("  " + row)
+    claude = claude_home(getattr(args, "claude_home", None))
+    claude_skills = claude / "skills"
+    if claude_skills.is_dir() and any((claude_skills / n).exists() for n in SKILLS):
+        print("Installed research skills (claude surface):")
+        for row in skill_status(claude):
+            print("  " + row)
     return 0
 
 
@@ -673,6 +716,7 @@ def cmd_inventory(args: argparse.Namespace) -> int:
 
 def cmd_doctor(args: argparse.Namespace) -> int:
     home = codex_home(args.codex_home)
+    claude = claude_home(getattr(args, "claude_home", None))
     target = Path(arg_target(args)).expanduser().resolve()
     failures: list[str] = []
     warnings: list[str] = []
@@ -705,6 +749,21 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         else:
             warnings.append("non-symlink or external skill: " + row)
 
+    # Verify the Claude surface too, but only when a Coresearch install is
+    # actually present there — a codex-only install must not fail because the
+    # claude surface is empty.
+    claude_skills = claude / "skills"
+    if claude_skills.is_dir() and any((claude_skills / n).exists() for n in SKILLS):
+        for row in skill_status(claude):
+            if "symlink:OK" in row:
+                print("PASS [claude] " + row)
+            elif "BROKEN" in row or "missing" in row:
+                failures.append("bad claude skill install: " + row)
+            else:
+                warnings.append("[claude] non-symlink or external skill: " + row)
+    else:
+        print("INFO claude surface not installed (codex-only install)")
+
     broken_repo_links = assert_no_broken_repo_symlinks()
     if broken_repo_links:
         for link in broken_repo_links:
@@ -712,7 +771,6 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     else:
         print("PASS no broken symlinks in repo")
 
-    claude = claude_home()
     scanned_install_roots = [r for r in _install_skill_roots(home, claude) if r.is_dir()]
     broken_install_links = broken_install_symlinks(home, claude)
     if broken_install_links:
@@ -783,8 +841,8 @@ def cmd_update(args: argparse.Namespace) -> int:
             global_bridge=args.global_bridge,
             project_bridge=False,
             project_dir=None,
-            scope="user",
-            mode="symlink",
+            scope=getattr(args, "scope", "user"),
+            mode=getattr(args, "mode", "symlink"),
             force=True,
         )
         code = cmd_link(link_args)
@@ -806,8 +864,8 @@ def cmd_repair(args: argparse.Namespace) -> int:
         global_bridge=args.global_bridge,
         project_bridge=False,
         project_dir=None,
-        scope="user",
-        mode="symlink",
+        scope=getattr(args, "scope", "user"),
+        mode=getattr(args, "mode", "symlink"),
         force=True,
     )
     code = cmd_link(link_args)
@@ -823,6 +881,7 @@ def cmd_repair(args: argparse.Namespace) -> int:
             return code
     doctor_args = argparse.Namespace(
         codex_home=args.codex_home,
+        claude_home=getattr(args, "claude_home", None),
         target=arg_target(args),
         target_arg=None,
         command_name=args.name,
@@ -904,6 +963,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     status = sub.add_parser("status", help="Show global/project/skill install status")
     status.add_argument("--codex-home")
+    status.add_argument("--claude-home")
     status.add_argument("target_arg", nargs="?", help="target directory (default: .)")
     status.add_argument("--target", help="target directory (overrides positional target)")
     status.set_defaults(func=cmd_status)
@@ -916,6 +976,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     doctor = sub.add_parser("doctor", help="Run install/runtime checks")
     doctor.add_argument("--codex-home")
+    doctor.add_argument("--claude-home")
     doctor.add_argument("target_arg", nargs="?", help="target directory (default: .)")
     doctor.add_argument("--target", help="target directory (overrides positional target)")
     doctor.add_argument("--command-name", default="harness")
@@ -929,6 +990,8 @@ def build_parser() -> argparse.ArgumentParser:
     repair.add_argument("--codex-home")
     repair.add_argument("--claude-home")
     repair.add_argument("--surface", choices=["codex", "claude", "both"], default="codex")
+    repair.add_argument("--scope", choices=["user", "project"], default="user")
+    repair.add_argument("--mode", choices=["copy", "symlink"], default="symlink")
     repair.add_argument("--bin-dir")
     repair.add_argument("--name", default="harness")
     repair.add_argument("--global-bridge", action="store_true")
@@ -941,6 +1004,8 @@ def build_parser() -> argparse.ArgumentParser:
     update.add_argument("--codex-home")
     update.add_argument("--claude-home")
     update.add_argument("--surface", choices=["codex", "claude", "both"], default="codex")
+    update.add_argument("--scope", choices=["user", "project"], default="user")
+    update.add_argument("--mode", choices=["copy", "symlink"], default="symlink")
     update.add_argument("--global-bridge", action="store_true")
     update.add_argument("--no-link", action="store_true")
     update.add_argument("--no-validate", action="store_true")

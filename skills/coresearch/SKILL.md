@@ -81,9 +81,11 @@ Use this as the first-stop router for research work. Keep it small: classify sta
 output and any ledger keys (state-ledger.md), return here to re-classify the
 stage and route the next skill — do not chain skill-to-skill on `Next:` hints
 alone. Role-skill `Next:` lines are conveniences; the `## Default routes` map
-above is canonical and complete. OMX lanes (`$autoresearch`, `$ralplan`,
-`$team`) and native subagents: on terminal, re-enter `coresearch` to route the
-follow-up stage (write-up, verify, review); do not chain from inside the lane.
+above is canonical and complete. OMX lanes (e.g. `$autoresearch`, `$ralplan`,
+`$team`, `$ultragoal`, `$deep-interview`; full set in
+[routing.md](references/routing.md) §OMX lanes) and native subagents: on
+terminal, re-enter `coresearch` to route the follow-up stage (write-up, verify,
+review); do not chain from inside the lane.
 
 ## Guardrails
 

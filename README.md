@@ -9,7 +9,7 @@ Coresearch is an installable research-agent bundle for Codex + oh-my-codex (OMX)
 | `AGENTS.md` | Development prompt for maintaining this Coresearch bundle | No |
 | `templates/research/AGENTS.md` | Full research-project prompt template | Copied by `harness init --full` |
 | `skills/*/SKILL.md` | Complete research skills | Symlinked/copied into `${CODEX_HOME:-~/.codex}/skills`, `${CLAUDE_HOME:-~/.claude}/skills`, or project `.codex/.claude` skill dirs |
-| `skills/manifest.json` | Coresearch-owned skills, companion routes, preferences, external OMX routes | Used by harness/validation |
+| `skills/manifest.json` | Coresearch-owned skills and optional external OMX acceleration routes | Used by harness/validation |
 | `harness`, `bin/harness`, `scripts/harness.py` | CLI for install/init/status/diff/rollback/repair/update | `harness self-install` symlinks command into `~/.local/bin` |
 
 The root `AGENTS.md` is intentionally **not** the template installed into other projects. It is only for editing this bundle.
@@ -34,7 +34,7 @@ This installs the Coresearch command plus user-level skill surfaces:
 It does **not** modify `${CODEX_HOME:-~/.codex}/AGENTS.md` unless you explicitly run `harness global -y`.
 Use `coresearch` as the broad research router; use the role skills directly for narrow tasks.
 
-Coresearch uses canonical names only: `coresearch` and `research-*` role skills. PowerPoint mechanics route to the external Claude `pptx` companion (no owned `pptx` skill). No shim aliases are installed or managed.
+Coresearch uses canonical names only: `coresearch` and `research-*` role skills. File-format output (`.pptx`/`.docx`/`.xlsx`/web) is produced by the user with external tools; Coresearch owns research content, not format mechanics. No shim aliases are installed or managed.
 
 Primary research modes: AI/ML/CV, Robotics, Graphics/Visual Computing, HCI/Technical HCI, and hybrids that need both technical and design/workflow evidence.
 

@@ -59,7 +59,7 @@ Success means the work is clearer, more rigorous, more situated, more reproducib
 
 ### Native subagent handoff
 
-When using native subagents, set a specific OMX `agent_type` and pass enough Coresearch context. A fresh subagent may not know the loaded skill unless it is given the skill item, forked context, or a compact handoff. Include: primary `research-*` skill (or `pptx` companion for finished decks), field mode, claim/evidence target, confidentiality limits, owned files or read-only scope, validation expected, no-fabrication rule, and active Ponytail/Caveman mode plus level when those modes affect output. Do not use `worker` outside active `$team`/`$swarm`.
+When using native subagents, set a specific OMX `agent_type` and pass enough Coresearch context. A fresh subagent may not know the loaded skill unless it is given the skill item, forked context, or a compact handoff. Include: primary `research-*` skill, field mode, claim/evidence target, confidentiality limits, owned files or read-only scope, validation expected, no-fabrication rule, and active Ponytail/Caveman mode plus level when those modes affect output. Do not use `worker` outside active `$team`/`$swarm`.
 
 Default role mapping: repo lookup → `explore`; official docs/current venue/literature metadata → `researcher`; code edits → `executor`; test/reproducibility → `test-engineer`; claim/completion audit → `verifier`; adversarial paper/deck review → `critic`/`code-reviewer`; prose help → `writer`.
 
@@ -82,7 +82,7 @@ Canonical Coresearch skill names:
 
 If multiple skills apply, load the smallest set and state the order once.
 
-No shim aliases are managed by this harness. Use canonical `coresearch` and `research-*` names. PowerPoint mechanics route to the external Claude `pptx` companion, not an owned skill; open-access PDF batch download lives in `research-survey`'s in-skill crawler.
+No shim aliases are managed by this harness. Use canonical `coresearch` and `research-*` names. File-format output (`.pptx`/`.docx`/`.xlsx`/web) is produced by the user with external tools; Coresearch owns research content, not format mechanics. Open-access PDF batch download lives in `research-survey`'s in-skill crawler.
 
 ### 3. Research writing model
 
@@ -102,15 +102,9 @@ Default paper spine: motivation → difficulty/opportunity → prior-work stream
 - **HCI / Technical HCI:** situated practice, contribution to HCI, design rationale, interaction clarity, appropriate validation, participant/deployment transparency, user agency, accessibility, implications, scoped limitations. User studies are not automatic; evidence must match claims.
 - **Hybrid:** use a dual-claim contract. Technical claim = what the system computes/generates/optimizes/controls under constraints. Design claim = what people can inspect, steer, revise, reject, appropriate, or understand.
 
-### 5. Artifact companions
+### 5. File-format output
 
-Coresearch owns research claims and narrative. Format skills own format mechanics when installed:
-
-- `.docx` manuscripts/comments → route to `docx` only for file mechanics.
-- Generic PDFs → route to `pdf`; use `research-survey`'s in-skill crawler for open-access literature fetch.
-- Finished `.pptx` decks → plan with `research-slides`, then use the Claude `pptx` companion for PowerPoint mechanics, rendering, and render QA; use `academic-ppt` only for LaTeX/PDF/equation-heavy source fidelity.
-- Workbooks/results sheets → route formula/format mechanics to `xlsx`; verify claims with `research-verify`.
-- Research demo UIs/web artifacts → use `research-engineer` for architecture, `frontend-design`/`frontend-skill`/`web-artifacts-builder` for UI/build/export when requested.
+Coresearch owns research claims and narrative; it does not own format mechanics. File output (`.docx`/`.pdf`/`.pptx`/`.xlsx`/web) is produced by the user with external tools. Open-access PDF fetch is the exception — it lives in `research-survey`'s in-skill crawler.
 
 ## Constraints & Safety
 

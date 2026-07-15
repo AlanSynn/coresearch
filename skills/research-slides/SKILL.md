@@ -5,12 +5,12 @@ description: Academic research presentation workflow. Use when the user asks for
 
 # research-slides — Academic Research Presentation
 
-Build research talks that preserve a paper's evidence and contribution without overloading slides — a derived artifact from verified claims, not a new source of claims. Default: slide plan + slide text in chat; `.tex`/`.pptx`/files only when requested.
+Build research talks that preserve a paper's evidence and contribution without overloading slides — a derived artifact from verified claims, not a new source of claims. Default: slide plan + slide text in chat; Beamer/LaTeX draft only when requested.
 
 ## What & When
 
 Outlines, claim-titled slides, speaker notes, Beamer drafts, conference talks,
-thesis defenses, interviews, group meetings; paper claims/figures/evidence into an audience-specific narrative; a claim-faithful plan before `.pptx`. Not for: low-level PowerPoint mechanics by default; decorative slides without a narrative. Inputs: paper, abstract, notes, figures, results, venue, audience, length — if missing assume 5 min → 5–7 slides, 10–15 min → 8–14, 30 min → 18–25, defense → 35–55.
+thesis defenses, interviews, group meetings; paper claims/figures/evidence into an audience-specific narrative; a claim-faithful plan before any deck build. Not for: low-level PowerPoint mechanics by default; decorative slides without a narrative. Inputs: paper, abstract, notes, figures, results, venue, audience, length — if missing assume 5 min → 5–7 slides, 10–15 min → 8–14, 30 min → 18–25, defense → 35–55.
 
 ## Procedure
 
@@ -36,14 +36,6 @@ thesis defenses, interviews, group meetings; paper claims/figures/evidence into 
 - Limitation slides increase credibility by bounding claims.
 - Visual polish is subordinate to argument clarity: hierarchy, contrast, readable figures, and claim-title alignment matter more than motif.
 - Field tone changes evidence emphasis, not the spine: AI/Robotics/Graphics/HCI decks still need background → gap → thesis → method → evidence → limits → takeaway.
-
-**Finished `.pptx` mechanics** — this skill owns research narrative, claim calibration, and slide structure; route build/render/QA to the Claude `pptx` companion (`academic-ppt` for paper-faithful LaTeX/PDF/equation-heavy builds). Produce a compact claim-faithful brief here first. When a companion or builder generates/edits a `.pptx`, require the QA handoff:
-
-1. text extraction check for missing content, wrong order, typos, and placeholder residue;
-2. rendered slide images or thumbnails;
-3. visual bug hunt for overflow, overlap, contrast, edge margins, cramped spacing, unreadable figures, and claim drift;
-4. at least one fix-and-verify cycle for affected slides;
-5. final statement of unresolved deck risks.
 
 ## Output
 
@@ -79,10 +71,9 @@ Visual: [Figure/table/diagram]
 ## Reject when
 
 - decorative slides with no research narrative, or inventing results/visuals/claims to look complete;
-- a slide carries an unsupported claim or result;
-- a finished `.pptx` is emitted without the QA handoff checks above.
+- a slide carries an unsupported claim or result.
 
 ## State & Handoff
 
-No ledger by default; the Research Talk Plan is the handoff artifact. Next: Claude `pptx` companion for `.pptx` build/render/QA; `academic-ppt` for paper-faithful LaTeX/PDF; Beamer — clean academic theme, semantic colors, dense equations only if the audience needs them, speaker notes as comments if requested, compile and report the command when files are generated.
+No ledger by default; the Research Talk Plan is the handoff artifact. Next: Beamer — clean academic theme, semantic colors, dense equations only if the audience needs them, speaker notes as comments if requested, compile and report the command when files are generated. The user owns `.pptx` file output via external tools; this skill delivers the claim-faithful plan and an optional Beamer draft.
 Re-entry: return to `coresearch` to re-route the next stage.

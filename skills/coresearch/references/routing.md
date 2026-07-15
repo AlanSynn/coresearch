@@ -18,12 +18,12 @@ Pick one primary skill.
 - `research-survey` owns open-access PDF batch download via its in-skill crawler.
 - Analytical skills (`research-gap`, `research-dialectic`, `research-causal`, `research-qualitative`, `research-audit`, `research-adversary`) → see [reasoning-skills.md](reasoning-skills.md).
 
-## Field and artifact companions
+## Field modes
 
 - Field/tone uncertainty → read `field-modes.md`, then route to `research-design` or `research-write`.
 - Research importance / contribution object uncertainty → read `research-rules.md`, then route to `research-design`.
-- `.pptx` mechanics → route to the Claude `pptx` companion after `research-slides` defines claims/narrative.
-- `.docx`, generic `.pdf`, `.xlsx`, frontend, or web artifact mechanics → read `artifact-companions.md`; Coresearch owns claims, companion owns format mechanics.
+
+File-format output (`.docx`/`.pdf`/`.pptx`/`.xlsx`/web) is owned by the user via external tools; Coresearch owns research content and claim integrity, not format mechanics.
 
 ## OMX lanes
 

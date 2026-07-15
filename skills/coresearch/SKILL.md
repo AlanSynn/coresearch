@@ -12,7 +12,6 @@ Use this as the first-stop router for research work. Keep it small: classify sta
 - Broad research requests where the right role skill is unclear.
 - Starting or re-scoping AI, Graphics, Robotics, HCI, or hybrid research projects.
 - Choosing between paper design, writing, review, survey, figures, engineering, rebuttal, verification, slides, and autonomous-loop work.
-- Routing file-artifact work to companion skills without making Coresearch own every document format.
 
 ## Must do
 
@@ -23,7 +22,7 @@ Use this as the first-stop router for research work. Keep it small: classify sta
 
 ## Not for
 
-- Low-level `.docx`, `.pdf`, `.pptx`, `.xlsx`, or web-app mechanics when a companion skill is the right owner.
+- Low-level `.docx`, `.pdf`, `.pptx`, `.xlsx`, or web-app mechanics — the user invokes an external format tool directly; Coresearch owns research content, not format mechanics.
 - Replacing OMX runtime skills such as `$autopilot`, `$team`, `$ultragoal`, `$ultraqa`, or `$autoresearch`.
 - Bulk-loading every skill or creating `.agents/` state forests.
 
@@ -45,10 +44,9 @@ Use this as the first-stop router for research work. Keep it small: classify sta
 - Read [reasoning-skills.md](references/reasoning-skills.md) when routing among the analytical skills (research-gap, research-dialectic, research-causal, research-qualitative, research-audit, research-adversary) or sequencing a multi-skill pipeline.
 - Read [research-contract.md](references/research-contract.md) at run start to capture the orchestrator input contract (topic, intended contribution, independent-group floor, output path).
 - Read [state-ledger.md](references/state-ledger.md) when orchestrating a multi-skill run or maintaining cross-skill state (it is the canonical state; OMX `.omx/specs` and `$ultragoal` only mirror it).
-- Read [artifact-companions.md](references/artifact-companions.md) when `.docx`, `.pdf`, `.pptx`, `.xlsx`, frontend, or web artifact work appears.
 - Read [evidence-grounding.md](references/evidence-grounding.md) for claims, citations, evidence, the integrity floor, or confidential material.
 - Read [omx-pony-caveman.md](references/omx-pony-caveman.md) when `$autoresearch`, `$ponytail`, `$caveman`, `$team`, `$ultragoal`, or native subagents affect execution.
-- Read [skill-catalog.md](references/skill-catalog.md) when auditing overlaps or installed companion skills.
+- Read [skill-catalog.md](references/skill-catalog.md) when auditing overlaps or optional OMX acceleration routes.
 
 ## Default routes
 
@@ -60,7 +58,7 @@ Use this as the first-stop router for research work. Keep it small: classify sta
 - Venue review/score forecast → `research-review`.
 - Rebuttal/discussion response → `research-rebuttal`.
 - Final line edit → `research-proofread`.
-- Talks/slides plan → `research-slides`; finished `.pptx` build/render/QA → Claude `pptx` companion; source-faithful LaTeX/PDF/equation-heavy decks → `academic-ppt`.
+- Talks/slides plan → `research-slides`.
 - Code/experiments/artifact release → `research-engineer`.
 - Hypotheses/validators/autonomous loop design → `research-loop`; execute with `$autoresearch` only after validator mode exists.
 - Experiment scope split (when two apply): which evidence supports each claim (plan) → `research-design`; hypotheses/validators/stop-conditions → `research-loop`; implement the experiment code → `research-engineer`.
@@ -72,7 +70,6 @@ Use this as the first-stop router for research work. Keep it small: classify sta
 - Explain a concept / decompose a mechanism → `research-write` (concept-decomposition mode).
 - Qualitative coding → themes (interviews, open responses) → `research-qualitative`.
 - Workflow stall diagnosis (stalled, repeating, weak synthesis) → read [reasoning-skills.md](references/reasoning-skills.md) §Stall diagnosis; routes back into the skills above.
-- DOCX/PDF/PPTX/XLSX/frontend/web mechanics → keep research claim owner in Coresearch, then route to companion skills from [artifact-companions.md](references/artifact-companions.md) when installed.
 - If two routes match: fact-check/number/citation → `research-verify` over `research-audit`; 'review' = venue score → `research-review`, methodology soundness → `research-audit`; experiment PLAN → `research-design`, hypotheses/validators → `research-loop`, implement code → `research-engineer`.
 
 ## Re-entry

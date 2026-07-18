@@ -51,6 +51,7 @@ When changing install behavior:
 - Do not apply global bridge changes unless the user explicitly asks.
 - Do not replace an existing project `AGENTS.md` without `--replace` semantics or an explicit user request.
 - Do not commit generated caches such as `__pycache__`, `.omx/`, or `tmp/` artifacts.
+- For long bundle commands such as `./scripts/validate.sh` or harness sweeps, use `skills/coresearch/references/execution-safe.md`: capture full output under ignored `.tmp/` scratch and inspect only bounded summaries.
 - Treat this repo's `tmp/` crawls as reference-only; do not install them.
 
 ## Verification & Completion

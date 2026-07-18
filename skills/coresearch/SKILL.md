@@ -19,6 +19,7 @@ Use this as the first-stop router for research work. Keep it small: classify sta
 - Select a field mode when design, writing, review, or engineering quality depends on AI / Robotics / Graphics / HCI norms.
 - Keep `coresearch` as a central triage unit: route, load only needed references, hand off, then re-enter on the next stage.
 - Preserve evidence discipline: separate fact, inference, recommendation, and unknown.
+- Agents are allowed when they reduce wall-clock time or cover disjoint work. Use the fewest needed; every agent gets an owned scope, expected output, and stop condition. Never add agents merely to re-check the same change.
 
 ## Not for
 
@@ -35,6 +36,20 @@ Use this as the first-stop router for research work. Keep it small: classify sta
 5. Use OMX workflows only when their lifecycle matters.
 6. Keep facts, inference, and recommendations separate.
 
+For executable research work, use the minimum experiment loop: implement one
+experiment unit; run one executable minimal smoke; run the actual
+training/inference experiment; fix only from observed result/error; run full
+regression once immediately before finalizing a claim. Full regression is a
+release gate, not a development loop.
+
+Execution budget: run one smallest targeted check after a behavior-changing
+edit; run broad regression/review/verifier once at the claim boundary; rerun a
+check only after a change or new diagnostic. Auto-retry once, allow at most two
+fix cycles per experiment unit, and stop if two attempts produce no new
+artifact or error signal. Give every long-running command or agent an expected
+duration and stop condition; stop/cancel it after twice that duration or two
+checks without new output.
+
 ## References
 
 - Read [stage-map.md](references/stage-map.md) when starting/reframing a project.
@@ -45,6 +60,7 @@ Use this as the first-stop router for research work. Keep it small: classify sta
 - Read [research-contract.md](references/research-contract.md) at run start to capture the orchestrator input contract (topic, intended contribution, independent-group floor, output path).
 - Read [state-ledger.md](references/state-ledger.md) when orchestrating a multi-skill run or maintaining cross-skill state (it is the canonical state; OMX `.omx/specs` and `$ultragoal` only mirror it).
 - Read [evidence-grounding.md](references/evidence-grounding.md) for claims, citations, evidence, the integrity floor, or confidential material.
+- Read [execution-safe.md](references/execution-safe.md) before long builds, tests, training, evaluation, benchmarks, or commands with potentially large output.
 - Read [omx-pony-caveman.md](references/omx-pony-caveman.md) when `$autoresearch`, `$ponytail`, `$caveman`, `$team`, `$ultragoal`, or native subagents affect execution.
 - Read [skill-catalog.md](references/skill-catalog.md) when auditing overlaps or optional OMX acceleration routes.
 

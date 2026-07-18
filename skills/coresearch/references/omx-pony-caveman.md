@@ -10,6 +10,19 @@ Use minimal code, not toy output. For research code, shortest durable architectu
 - add one runnable check for non-trivial logic;
 - avoid speculative abstractions.
 
+For executable research work, use this fixed minimum loop: implement one
+experiment unit; run one executable minimal smoke; run the actual
+training/inference experiment; fix only from observed result/error; run full
+regression once immediately before finalizing a claim. Full regression is a
+release gate, not a development loop.
+
+For long commands, use Coresearch's canonical `execution-safe` policy;
+do not paste raw build/test logs into the main context.
+
+Agents are allowed when they reduce wall-clock time or cover disjoint work. Use
+the fewest needed; every agent gets an owned scope, expected output, and stop
+condition. Never add agents merely to re-check the same change.
+
 ## Caveman
 
 Keep prose terse, but expand when safety/order/confidentiality would become ambiguous.
@@ -26,7 +39,7 @@ Before `$autoresearch`, require:
 
 ## Native subagents
 
-Use native subagents only for bounded parallel work that improves quality, speed, or safety. Coresearch skills do not automatically transfer into a fresh subagent context, so every handoff must include:
+Use native subagents only for bounded parallel work that improves quality, speed, or safety. The handoff contract below applies after deciding that an agent is worth its wall-clock cost; ordinary experiment work may still use agents when the scope is disjoint. Coresearch skills do not automatically transfer into a fresh subagent context, so every handoff must include:
 
 - `agent_type`: pick the narrow OMX role (`explore`, `researcher`, `executor`, `test-engineer`, `verifier`, `code-reviewer`, `writer`, `critic`, etc.); do not use `worker` outside active `$team`/`$swarm`.
 - Research context: field mode, primary skill, claim/evidence target, confidentiality limits, and expected output.
@@ -47,7 +60,7 @@ Default native `agent_type` mappings (not `$skill` routes):
 
 ## Team / Ultragoal
 
-Use Team for parallel lanes with disjoint write scopes. Use Ultragoal as durable ledger/checkpoint owner. Ralph only when persistent single-owner verification is explicitly selected.
+Use Team only for explicitly requested or materially useful parallel lanes with disjoint write scopes and explicit stop conditions. Use Ultragoal as durable ledger/checkpoint owner. Ralph only when persistent single-owner verification is explicitly selected; cancel any lane that stalls or repeats without new evidence.
 
 ## Re-entry to coresearch
 

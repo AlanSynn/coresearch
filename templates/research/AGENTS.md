@@ -39,8 +39,10 @@ Success means the work is clearer, more rigorous, more situated, more reproducib
 6. **Current rules require verification.** For deadlines, page limits, templates, anonymity, AI policies, review forms, and scoring scales, verify official venue pages when the answer depends on current policy.
 7. **Reviewer realism.** Reviews must include score/recommendation, confidence, blockers, score movement conditions, and likely variance.
 8. **Surgical edits.** Preserve the actual contribution. Rewrite for argument, structure, evidence, and clarity; do not add unsupported novelty or results.
-9. **Autonomous but bounded.** Continue through safe, reversible, local inspect-edit-test-verify loops. Ask only for destructive, credential-gated, external-production, confidential, or materially branching decisions.
+9. **Autonomous but bounded.** Continue through safe, reversible, local inspect-edit-run loops. Use the smallest targeted check needed after a change; reserve broad regression and independent review for the claim boundary, except for security, data-loss, integrity, or explicit user-requested checks. Ask only for destructive, credential-gated, external-production, confidential, or materially branching decisions.
 10. **Outcome-first reporting.** Start with the artifact or answer. Keep progress updates short: target result, constraints, evidence, stop condition.
+11. **Experiment-first execution.** For executable research work, follow this order: implement one experiment unit; run one executable minimal smoke; run the actual training/inference experiment; fix only from observed result/error; run full regression once immediately before finalizing a claim. Full regression is a release gate, not a development loop.
+12. **Bounded parallelism.** Agents are allowed when they reduce wall-clock time or cover disjoint work. Use the fewest needed; every agent gets an owned scope, expected output, and stop condition. Never add agents merely to re-check the same change.
 
 ## Execution Protocol
 
@@ -48,12 +50,12 @@ Success means the work is clearer, more rigorous, more situated, more reproducib
 
 - **Direct research answer:** answer in chat using `coresearch` behavior.
 - **Paper workflow:** load the smallest complete installed skill by canonical name.
-- **Repository lookup:** use normal repo inspection or a native `explore` subagent for simple file/symbol/pattern questions; use `omx explore` only as a compatibility fallback when explicitly available and useful.
+- **Repository lookup:** use normal repo inspection first. Use a native `explore` subagent when it materially improves quality, speed, or safety; use `omx explore` only as a compatibility fallback when explicitly available and useful.
 - **External docs / current rules / literature:** use official, primary, or source-backed references. Browse/search when current or exact accuracy matters.
 - **Unclear scope:** use `$deep-interview` or ask one concise question.
 - **Planning with tradeoffs:** use `$ralplan` or `research-design` depending on whether an executable plan or a paper design contract is needed.
 - **Validator-gated autonomous research:** use `research-loop`; if running OMX, prefer `$deep-interview --autoresearch` → `$autoresearch`.
-- **Parallel execution:** use `$team` or native subagents only when explicitly requested or when parallelism materially improves quality/speed/safety. Keep write scopes disjoint.
+- **Parallel execution:** use the fewest agents that materially improve quality, speed, or safety. Use `$team` or native subagents for bounded, disjoint lanes with owned scopes and stop conditions; do not parallelize implementation, smoke, training, and regression checks for the same experiment.
 - **Persistent single-owner completion:** use `$ralph` only for a clear, approved, verifiable loop.
 
 
@@ -119,6 +121,25 @@ Coresearch owns research claims and narrative; it does not own format mechanics.
 
 Before finalizing, verify the claim you are making about completion:
 
+### Verification cadence and stop budget
+
+- Run one smallest targeted check after a behavior-changing edit; do not run
+  the full suite or a broad review at every iteration.
+- Run full regression, broad review, or an independent verifier once, directly
+  before finalizing a claim. Re-running one of these on an unchanged diff is
+  churn; rerun only after a code/data/config change or a new diagnostic.
+- Auto-retry once with a narrower diagnosis after a failed validation; allow at most
+  two fix cycles per experiment unit. If two attempts produce no new artifact
+  or error signal, stop and report the blocker instead of re-deriving context.
+- Before a long-running command or agent, state an expected duration and stop
+  condition. If it exceeds twice that duration or produces no new output,
+  artifact, or diagnostic across two checks, stop/cancel it and report why.
+- Run an early broad check only for security, data-loss, integrity, or an
+  explicit user request.
+- For build/test/training commands that may run long or emit large output, read
+  `skills/coresearch/references/execution-safe.md`; it defines scratch logs,
+  bounded inspection, advisor gating, failure diagnosis, and artifact promotion.
+
 - **Paper review/score:** include scale, score, confidence, rationale, blockers, movement conditions, variance, and action plan.
 - **Rewrite:** output polished text first, then only useful diagnostics and remaining claim/evidence risks.
 - **Survey/citations:** include sources used; distinguish verified, partially verified, and unverified items.
@@ -130,11 +151,14 @@ Use internal scoring scales only when official current forms are not verified, a
 
 ## Recovery & Lifecycle
 
+0. Bound every loop with the verification cadence and stop budget above; do not
+   keep a process, agent, or lane alive without new evidence.
 1. If a task fails validation, retry once with a narrower diagnosis.
 2. If failure is domain-specific, switch to the relevant skill or specialist role.
 3. If files were changed and the direction is wrong, make a small corrective patch; do not rewrite unrelated work.
 4. If blocked by missing evidence, authority, confidentiality, or destructive choice, stop and ask one concise question.
-5. If an OMX mode is active and the task is complete or unrecoverably blocked, use the appropriate cancellation/terminal state rather than leaving stale workflow state.
+5. If a stage stalls or repeats with no new evidence, stop and surface the
+   blocker; cancel any active OMX mode rather than leaving stale workflow state.
 6. Before compaction or long pauses, preserve only critical state using OMX note/wiki/state tools when available; do not create ad-hoc paper state folders.
 
 ## Lore Commit Protocol

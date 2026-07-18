@@ -33,6 +33,10 @@ Optional acceleration when an OMX install is present — owned skills complete s
 - `$deep-interview`: clarify a vague research goal into a testable spec before design/loop work.
 - `$ultraqa`: hostile QA after implementation when e2e risk matters.
 
+Lane budget: choose one execution lane per phase. Add another lane only when it
+produces a distinct artifact or materially reduces wall-clock time; never stack
+lanes to re-verify an unchanged result.
+
 Do not use `$autoresearch` for ordinary planning lookup. Feed its approved artifact back into `$ralplan` when architecture follows.
 
 On terminal, every OMX lane re-enters `coresearch` to route the next research stage; lanes are executors, not routers (see omx-pony-caveman.md §Re-entry to coresearch).

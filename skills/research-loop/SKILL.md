@@ -29,15 +29,34 @@ creating legacy `.agents/` state, mailboxes, or ad-hoc multi-agent frameworks.
 - **Specify artifacts** — code, logs, tables, figures, datasets, study notes,
   benchmark outputs, manuscript sections.
 - **Define validators** — for each artifact, a pass/fail check, threshold,
-  reviewer-usefulness test, or human-inspection criterion.
+  reviewer-usefulness test, or human-inspection criterion. Prefer one minimal
+  validator per artifact; do not add redundant validators that prove the same
+  thing.
 - **Set sandbox boundaries** — allowed files, datasets, external calls, compute
   limits, credentials, privacy/confidentiality, destructive-operation policy.
+- **Choose command handling** — read `coresearch/references/execution-safe.md`
+  before any long build, test, training, evaluation, or benchmark command.
 - **Plan the loop** — inner experiment loop, outer synthesis loop, reflection
   cadence, stop conditions.
-- **Score research risk** — novelty, evidence, reproducibility, ethics, venue-fit.
-- **Choose handoff** — stay in chat, create requested files, or hand off to
-  `$deep-interview --autoresearch` / `$autoresearch` when OMX runtime is active.
-  Execute with `$autoresearch` only after validator mode exists.
+- **Bound the execution** — agents are allowed when they reduce wall-clock time
+  or cover disjoint work. Use the fewest needed; every agent gets an owned
+  scope, expected output, and stop condition. Never add agents merely to
+  re-check the same change.
+- **Run the experiment** — implement one experiment unit; run one executable
+  minimal smoke; run the actual training/inference experiment; fix only from
+  observed result/error; run full regression once immediately before finalizing
+  a claim. Run one smallest targeted check after a behavior-changing edit;
+  full regression is a release gate, not a development loop. Auto-retry once,
+  allow at most two fix cycles per experiment unit, and stop if two attempts
+  produce no new artifact or error signal.
+- **Score research risk** — novelty, evidence, reproducibility, ethics, venue-fit
+  at mission start and when evidence or constraints change; do not re-score on
+  every iteration.
+- **Choose handoff** — choose one execution lane at a phase boundary: stay in
+  chat, create requested files, or hand off to `$deep-interview --autoresearch`
+  / `$autoresearch` when OMX runtime is active. Add another lane only for a
+  distinct artifact or a material wall-clock gain; execute `$autoresearch` only
+  after validator mode exists.
 
 ## Output
 

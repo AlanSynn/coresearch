@@ -53,6 +53,9 @@ Bottleneck rules (bind the diagnosis):
 - clean narrative / few contradictions → confirmation bias / over-filtered set / no adversarial search / prose before validation.
 - many candidate gaps / weak direction → no ranking / no feasibility / no venue target / gap-gen separated from experiment design.
 - repeated agent loops → no stopping criteria / no durable artifacts / re-reading context / no state ledger / unresolved questions untracked.
+- repeated checks, reviews, or verifier runs on an unchanged diff → execution
+  cadence failure; stop rather than route to another `research-*` skill, and
+  surface the blocker or ask one question.
 
 Every corrective action must name: the target skill, an **Expected Observable
 Improvement** (what to check that the fix worked), and a **Stop/Escalation

@@ -74,6 +74,90 @@ for marker in required:
 assert 'PaperSmith' not in agents
 assert '/project_brief.md' not in agents
 assert 'Do not create separate `.agents/` chats' in agents
+
+# Experiment work must stay experiment-first: implement, minimal smoke, real
+# run, evidence-driven fix, then one release-gate regression pass.
+experiment_policy = [
+    'implement one experiment unit',
+    'run one executable minimal smoke',
+    'run the actual training/inference experiment',
+    'fix only from observed result/error',
+    'run full regression once immediately before finalizing a claim',
+]
+for rel in (
+    'templates/research/AGENTS.md',
+    'skills/coresearch/SKILL.md',
+    'skills/research-engineer/SKILL.md',
+    'skills/research-loop/SKILL.md',
+    'skills/coresearch/references/omx-pony-caveman.md',
+):
+    text = ' '.join(Path(rel).read_text().lower().split())
+    for rule in experiment_policy:
+        assert rule in text, f'{rel} missing experiment policy: {rule}'
+
+agent_budget_policy = (
+    'agents are allowed when',
+    'owned scope',
+    'expected output',
+    'stop condition',
+    'never add agents merely to re-check the same change',
+)
+for rel in (
+    'templates/research/AGENTS.md',
+    'skills/coresearch/SKILL.md',
+    'skills/research-engineer/SKILL.md',
+    'skills/research-loop/SKILL.md',
+    'skills/coresearch/references/omx-pony-caveman.md',
+):
+    text = ' '.join(Path(rel).read_text().lower().split())
+    for rule in agent_budget_policy:
+        assert rule in text, f'{rel} missing agent budget policy: {rule}'
+
+cadence_policy = (
+    'one smallest targeted check',
+    'auto-retry once',
+    'at most two fix cycles',
+    'no new artifact or error signal',
+)
+for rel in (
+    'templates/research/AGENTS.md',
+    'skills/coresearch/SKILL.md',
+    'skills/research-engineer/SKILL.md',
+    'skills/research-loop/SKILL.md',
+):
+    text = ' '.join(Path(rel).read_text().lower().split())
+    for rule in cadence_policy:
+        assert rule in text, f'{rel} missing cadence policy: {rule}'
+
+template_text = ' '.join(agents.lower().split())
+assert 'test-verify loops' not in template_text
+assert 'if a stage stalls or repeats with no new evidence' in template_text
+assert 'twice that duration' in template_text
+assert 'one execution lane per phase' in ' '.join(Path('skills/coresearch/references/routing.md').read_text().lower().split())
+
+safe_execution = ' '.join(Path('skills/coresearch/references/execution-safe.md').read_text().lower().split())
+for rule in (
+    '## advisor gate',
+    '## run discipline',
+    '## artifact tiers',
+    'omx ask claude',
+    'project `.tmp/build-safe/`',
+    'bounded summary',
+    'do not `cat` a long log',
+    'redact secrets',
+    'never the full log',
+):
+    assert rule in safe_execution, f'execution-safe.md missing: {rule}'
+assert '.tmp/' in Path('.gitignore').read_text()
+for rel in (
+    'AGENTS.md',
+    'templates/research/AGENTS.md',
+    'skills/coresearch/SKILL.md',
+    'skills/research-engineer/SKILL.md',
+    'skills/research-loop/SKILL.md',
+):
+    assert 'execution-safe.md' in Path(rel).read_text(), f'{rel} missing execution-safe reference'
+
 root_agents = Path('AGENTS.md').read_text()
 assert 'Coresearch Bundle Development Guidelines' in root_agents
 assert 'OMX Research Agent System' not in root_agents
@@ -151,7 +235,7 @@ PY
 python3 - <<'PY'
 from pathlib import Path
 refs = Path('skills/coresearch/references')
-for name in ('evidence-grounding', 'research-contract', 'state-ledger', 'reasoning-skills'):
+for name in ('evidence-grounding', 'execution-safe', 'research-contract', 'state-ledger', 'reasoning-skills'):
     assert (refs / f'{name}.md').exists(), f'missing shared ref: {name}.md'
 PY
 pass "shared evidence references exist"

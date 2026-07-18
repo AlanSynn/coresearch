@@ -22,8 +22,10 @@ architecture for scratch code that supports no claim yet.
 ## Procedure
 
 Tie every change to the claim it supports; reuse patterns before adding
-abstractions. Use a native `explore` subagent (or `omx explore` fallback) for
-read-only lookups; `$team` only for approved parallel work with disjoint write
+abstractions. Agents are allowed when they reduce wall-clock time or cover
+disjoint work. Use the fewest needed; every agent gets an owned scope, expected
+output, and stop condition. Never add agents merely to re-check the same
+change; `$team` is reserved for approved parallel work with disjoint write
 scopes.
 
 - **A. Claim → code** — identify which claim, figure, table, benchmark, or
@@ -34,22 +36,28 @@ scopes.
   result-producing pipeline.
 - **D. Implement surgically** — keep domain logic separate from
   IO/model/device/API/file-format adapters when code will persist.
-- **E. Architecture** — Strategy + Registry only when multiple methods are real
-  requirements; adapters for third-party APIs/formats; DDD-shaped core
-  (`domain/`, `application/`, `adapters/`, `infrastructure/`, `interfaces/`)
-  when code is meant to last; immutable data objects for domain concepts; typed
-  interfaces and fail-fast config; contain `Any`/untyped blobs at boundaries;
-  vectorize tensor ops unless a loop is clearer. Route docs by temperature:
-  `docs/hot/` active claim/run state, `docs/index/` stable maps, `docs/cold/`
-  archive. Read references/architecture-playbook.md when DDD boundaries,
-  hot/index/cold docs, or `AGENTS.md` notes matter.
+- **E. Architecture** — keep an exploratory experiment flat. Add a boundary
+  only when a second real consumer, method, or external interface requires it;
+  reuse existing utilities before introducing Strategy, Registry, DDD layers,
+  or new configuration.
 - **F. Explicit configuration & determinism** — no hidden defaults, magic
   strings, or silent side effects; pass seeds or generators explicitly where
   feasible; define metric units, aggregation, CIs / seed variation when relevant.
-- **G. Checks** — add the smallest runnable check that proves changed behavior
-  or reproducibility: tests, smoke checks, or repro scripts.
-- **H. Validate & report** — run validation commands; report changed files,
-  commands, results, and remaining limitations.
+- **G. Minimum experiment loop** — implement one experiment unit; run one
+  executable minimal smoke; run the actual training/inference experiment; fix
+  only from observed result/error; run full regression once immediately before
+  finalizing a claim. Full regression is a release gate, not a development
+  loop. Run it earlier only for security, data-loss, integrity, or an explicit
+  user request.
+- **H. Checks & report** — run one smallest targeted check after a behavior-
+  changing edit; rerun only after a change or new diagnostic. Auto-retry once,
+  allow at most two fix cycles per experiment unit, and stop if two attempts
+  produce no new artifact or error signal. Run broad regression once at the
+  claim boundary, then report changed files, commands, results, artifacts, and
+  remaining limitations. For long builds/tests/experiments, first read
+  `coresearch/references/execution-safe.md`: capture complete output under
+  ignored `.tmp/` scratch, inspect only a bounded summary, and diagnose a saved
+  log before any minimal rerun.
 
 ## Output
 

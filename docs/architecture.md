@@ -73,6 +73,82 @@ public DNS answers, and retains partial results in a fresh directory. DNS and
 socket timeouts are not a wall-clock job scheduler. Host limits remain necessary
 for hard deadlines. It does not parse or execute downloaded documents.
 
+## Research engineering and event-driven coordination
+
+**Decision, 2026-09-29:** Retain Astra as the default lead, expose Engineering on
+demand, and use coarse, event-driven delegation instead of periodic model-facing
+check-ins. This extends the existing ownership boundary without adding a runtime.
+It does not encode a permanent model ranking or require delegation on every task.
+
+The Engineering resource makes SOLID, strategic/tactical DDD, maturity, architectural
+decisions, and scientific contracts available when implementation choices warrant
+them. It does not prescribe a software framework for a small experiment. A changed
+metric, split, coordinate frame, or preprocessing rule can invalidate evidence
+without breaking an API; preserve the old definition and affected results.
+The optional personal example remains outside `skills/coresearch`. The installer,
+root maintenance instructions, discovery metadata, and Python utilities are unchanged.
+
+### Separate three responsibilities
+
+Astra owns research judgment and substantial direct work as well as synthesis.
+Workers own bounded execution, local observation, tests, and correction. The host
+owns scheduling, permissions, hard budgets, process supervision, and completion
+transport. A health event does not require a model conversation unless it changes
+a decision. Reducing lead-worker traffic must not remove tool feedback, meaningful
+verification, budget enforcement, or the ability to interrupt unsafe work.
+
+Use a compact initial contract and an evidence-bearing final handoff. Escalate
+blockers, violated assumptions, material new evidence, and authority boundaries.
+A checkpoint before an expensive experiment can be valuable if its result changes
+the decision to proceed. A timer-driven request to restate progress is different.
+Avoid transcript replay, forced narration of hidden reasoning, microtask relays,
+and global barriers between independent assignments. Preserve raw artifacts for
+selective inspection. Silence is not a success signal.
+
+### Alternatives and reconsideration
+
+Direct Astra remains preferable for strongly coupled or difficult work where
+briefing and integration would dominate. Direct Sol is a candidate where it meets
+the quality bar without lead intervention. Astra plus capable workers is the
+default candidate for separable, substantial work, not an obligation to create a
+hierarchy. Nested coordinators and continual lead approval add coordination and
+must justify themselves against those simpler baselines.
+
+Reconsider the defaults when representative runs show a different quality/cost
+tradeoff, missed early failure, integration rework, or changed host capabilities.
+Measure time and spend to a valid deliverable, not just worker tokens or message
+count. The [host protocol](validation.md) separates model choice from check-in
+policy; no live comparative improvement is claimed by this change.
+
+### Evidence and limits of the architectural analogy
+
+The following sources were inspected on 2026-09-29. They motivate the design;
+they do not constitute a Coresearch performance evaluation.
+
+- [OpenAI's skill guidance](https://developers.openai.com/blog/rethinking-skills-and-prompts-for-gpt-6-astra)
+  recommends minimal routing, on-demand resources, and meaningful decision boundaries
+  rather than inherited procedures for less capable models.
+- [GPT-6.1 Sol documentation](https://developers.openai.com/api/docs/models/gpt-6.1-sol)
+  describes a lower-cost option for complex work and recommends task-level comparison
+  with Astra. That is vendor guidance, not evidence of a universal worker/lead ranking.
+- [Async tool calling](https://developers.openai.com/api/docs/guides/async-tool-calling)
+  supports continuing independent work and waiting when a pending result is needed.
+  Job execution and result delivery remain application responsibilities.
+- [Responses Multi-agent](https://developers.openai.com/api/docs/guides/responses-multi-agent)
+  documents a same-model agent tree and availability constraints. It is not by itself
+  a heterogeneous Astra/Sol runtime. Host support must be checked before assigning
+  models; Coresearch does not implement an API transport or model router.
+- [Raschka's article](https://magazine.sebastianraschka.com/p/gpt-6-astra-looped-transformers-and)
+  discusses recurrent depth and hidden reasoning, not a controlled comparison of
+  worker check-in schedules. Do not infer that a status message destroys latent
+  state or that looped transformers prove a particular orchestration topology.
+  [Recurrent-depth research](https://arxiv.org/abs/2502.05171)
+  concerns computation inside a model, a different level from inter-agent messaging.
+
+SpatialClaw's reusable, inspectable execution state informs Engineering's workspace
+contracts. It does not justify importing its full execution graph, nor does its
+spatial-reasoning performance establish a gain for this research harness.
+
 ## Migration from version 1
 
 This is a breaking replacement, not a compatibility release. The repository

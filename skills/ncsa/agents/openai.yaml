@@ -1,0 +1,3 @@
+interface:
+  display_name: "NCSA Delta"
+  short_description: "Run bounded GPU jobs with verified storage and job state"

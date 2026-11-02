@@ -76,6 +76,11 @@
       "name": "research-adversary",
       "role": "adversary",
       "group": "verify"
+    },
+    {
+      "name": "ncsa",
+      "role": "infra",
+      "group": "infra"
     }
   ],
   "external_routes": [

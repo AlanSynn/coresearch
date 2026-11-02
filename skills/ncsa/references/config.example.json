@@ -1,0 +1,12 @@
+{
+  "host": "delta",
+  "account": "",
+  "compute_root": "",
+  "data_root": "",
+  "filesystem_dependencies": ["projects", "work"],
+  "partition": "gpuA40x4",
+  "minutes": 30,
+  "cpus": 4,
+  "memory_gb": 16,
+  "environment": {}
+}

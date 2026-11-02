@@ -432,7 +432,10 @@ pass "harness init shorthand/target-override bridge dry/apply/idempotent"
 
 # omx-conditional bridge: default bridges when omx present; CORESEARCH_OMX_CHECK=0 seam skips when absent; --bridge forces.
 omx_present_default="$(mktemp -d)"
-./harness init "$omx_present_default" -y </dev/null >/tmp/research-skills-harness-init-omx-present.txt
+omx_presence_fixture_bin="$(mktemp -d)"
+printf '#!/usr/bin/env sh\nexit 0\n' > "$omx_presence_fixture_bin/omx"
+chmod +x "$omx_presence_fixture_bin/omx"
+CORESEARCH_OMX_CHECK=1 PATH="$omx_presence_fixture_bin:$PATH" ./harness init "$omx_present_default" -y </dev/null >/tmp/research-skills-harness-init-omx-present.txt
 grep -q 'omx detected' /tmp/research-skills-harness-init-omx-present.txt || fail "harness init default did not report omx detection"
 grep -q 'RESEARCH_AGENT_SKILLS:START' "$omx_present_default/AGENTS.md" || fail "harness init default did not bridge when omx present"
 
@@ -450,7 +453,7 @@ pass "harness init omx-conditional bridge: present/default bridges, absent/defau
 
 noninteractive_init="$(mktemp -d)"
 printf 'ORIGINAL\n' > "$noninteractive_init/AGENTS.md"
-(cd "$noninteractive_init" && "$ROOT_DIR/harness" init </dev/null) >/tmp/research-skills-harness-init-nontty.txt
+(cd "$noninteractive_init" && CORESEARCH_OMX_CHECK=1 PATH="$omx_presence_fixture_bin:$PATH" "$ROOT_DIR/harness" init </dev/null) >/tmp/research-skills-harness-init-nontty.txt
 grep -q 'Dry run only' /tmp/research-skills-harness-init-nontty.txt || fail "harness init non-TTY did not stay dry-run"
 ! grep -q 'Interactive project setup' /tmp/research-skills-harness-init-nontty.txt || fail "harness init non-TTY opened wizard"
 grep -q '^ORIGINAL$' "$noninteractive_init/AGENTS.md" || fail "harness init non-TTY modified existing AGENTS.md"

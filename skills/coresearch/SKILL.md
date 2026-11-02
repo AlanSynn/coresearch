@@ -30,6 +30,7 @@ resources, not stages or a required sequence.
 | Gaps, contradictions, causal or qualitative analysis | [Analysis](references/analysis.md) |
 | Writing, figures, review, rebuttal, release | [Manuscripts](references/manuscripts.md) |
 | A bounded worker assignment | [Delegation](references/delegation.md) |
+| NCSA Delta GPU runs, staging, result retrieval, storage audit | [NCSA Delta](references/ncsa.md) |
 
 Keep empirical claims traceable to inspected sources or actual runs. A retrieved
 file is not a verified claim. Preserve contrary evidence and unresolved limits

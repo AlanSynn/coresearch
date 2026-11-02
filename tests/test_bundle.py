@@ -29,6 +29,8 @@ class BundleTests(unittest.TestCase):
 
     def test_markdown_local_links_exist(self):
         for file in ROOT.rglob("*.md"):
+            if any(part.startswith(".") for part in file.relative_to(ROOT).parts):
+                continue  # dot directories are local state, not payload content
             for target in re.findall(r"\[[^\]]*\]\(([^)]+)\)", file.read_text(encoding="utf-8")):
                 if "://" in target or target.startswith("#"):
                     continue
@@ -42,7 +44,8 @@ class BundleTests(unittest.TestCase):
             self.assertFalse((ROOT / path).exists(), path)
 
     def test_runtime_imports_are_standard_library_only(self):
-        for path in (ROOT / "scripts/coresearch.py", ROOT / "skills/coresearch/scripts/fetch_sources.py"):
+        for path in (ROOT / "scripts/coresearch.py", ROOT / "skills/coresearch/scripts/fetch_sources.py",
+                     ROOT / "skills/coresearch/scripts/ncsa.py"):
             for node in ast.walk(ast.parse(path.read_text())):
                 if isinstance(node, ast.Import):
                     names = [alias.name.split(".")[0] for alias in node.names]

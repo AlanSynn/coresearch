@@ -650,4 +650,181 @@ assert not dead, f'dead relative links under skills/: {dead}'
 print(f'PASS: no dead relative links under skills/ ({checked} targets)')
 PY
 
+# ncsa run discipline: offline suite (layout refusals, meta.json, run id,
+# fetch receipt/hash verification) plus CLI end-to-end with stub ssh/rsync
+# fixtures. No real SSH: NCSA Delta needs interactive Duo, so all checks are
+# local fakes.
+python3 skills/ncsa/tests/test_ncsa_limits.py >/tmp/research-skills-ncsa-unittest.txt 2>&1 ||
+  fail "ncsa offline test suite failed (see /tmp/research-skills-ncsa-unittest.txt)"
+grep -q '^OK' /tmp/research-skills-ncsa-unittest.txt || fail "ncsa offline test suite did not report OK"
+pass "ncsa offline suite: one-root layout refusals, meta.json, run id, repo-locked fetch receipt"
+
+ncsa_bin="$(mktemp -d)"
+ncsa_repo="$(mktemp -d)"
+python3 - "$ncsa_bin" <<'PY'
+import hashlib
+import sys
+from pathlib import Path
+
+bin_dir = Path(sys.argv[1])
+sha = hashlib.sha256(b'{}\n').hexdigest()
+inventory = ('{"files": [{"path": "results/synthetic-result/result.json", '
+             '"sha256": "' + sha + '", "bytes": 3, "mode": 420}], '
+             '"remote_base": "/work/hdd/verified/user/verified-repo/runs/label-one/results"}')
+(bin_dir / 'ssh').write_text(f'#!/usr/bin/env sh\ncat <<\'JSON\'\n{inventory}\nJSON\n')
+(bin_dir / 'rsync').write_text(
+    '#!/usr/bin/env sh\n'
+    'for last; do :; done\n'
+    'mkdir -p "$last/results/synthetic-result"\n'
+    "printf '{}\\n' > \"$last/results/synthetic-result/result.json\"\n"
+    'chmod 644 "$last/results/synthetic-result/result.json"\n')
+for path in (bin_dir / 'ssh', bin_dir / 'rsync'):
+    path.chmod(0o755)
+PY
+
+ncsa_helper="$ROOT_DIR/skills/ncsa/scripts/ncsa.py"
+(
+  cd "$ncsa_repo" || exit 1
+  git init -q
+  mkdir -p scripts artifacts .ncsa
+  printf 'print("hi")\n' > scripts/entry.py
+  cat > .ncsa/config.json <<'JSON'
+{
+  "host": "delta",
+  "account": "verified-delta-gpu",
+  "compute_root": "/work/hdd/verified/user/verified-repo",
+  "data_root": "/projects/verified/user/verified-repo",
+  "project": "verified-repo",
+  "filesystem_dependencies": ["projects", "work"],
+  "partition": "gpuA40x4",
+  "minutes": 10,
+  "cpus": 4,
+  "memory_gb": 16,
+  "environment": {}
+}
+JSON
+  python3 - <<'PY'
+import json
+from pathlib import Path
+
+config = json.loads(Path('.ncsa/config.json').read_text())
+del config['project']
+Path('.ncsa/config-no-project.json').write_text(json.dumps(config))
+PY
+  # project: explicit field or git remote basename only; this fixture repo has
+  # no remote, so the config without project must be refused (never dirname).
+  if python3 "$ncsa_helper" prepare --config .ncsa/config-no-project.json --source . \
+      --include scripts --out .ncsa/runs/rejected --entry python3 scripts/entry.py \
+      >/tmp/research-skills-ncsa-prepare-noproject.txt 2>&1; then
+    echo "FAIL: prepare accepted a config without project despite no git remote" >&2
+    exit 1
+  fi
+  grep -q 'explicit project field' /tmp/research-skills-ncsa-prepare-noproject.txt || {
+    echo "FAIL: prepare missing-project refusal lacked guidance" >&2
+    exit 1
+  }
+  if python3 "$ncsa_helper" prepare --config .ncsa/config.json --source . \
+      --include scripts --out .ncsa/runs/evil --run-id '../escape' \
+      --entry python3 scripts/entry.py \
+      >/tmp/research-skills-ncsa-prepare-badid.txt 2>&1; then
+    echo "FAIL: prepare accepted an out-of-structure --run-id" >&2
+    exit 1
+  fi
+  python3 "$ncsa_helper" prepare --config .ncsa/config.json --source . \
+    --include scripts --out .ncsa/runs/label-one --run-id label-one \
+    --entry python3 scripts/entry.py >/tmp/research-skills-ncsa-prepare.txt
+  grep -q '"run_id": "label-one"' /tmp/research-skills-ncsa-prepare.txt ||
+    { echo "FAIL: prepare did not record the chosen run id" >&2; exit 1; }
+  [[ -f .ncsa/runs/label-one/stage/scripts/entry.py ]] ||
+    { echo "FAIL: prepared run did not mirror the stage/ layout" >&2; exit 1; }
+  grep -q 'export TMPDIR="${TMPDIR:-/tmp}"' .ncsa/runs/label-one/stage/ncsa-job.sh ||
+    { echo "FAIL: job script does not pin TMPDIR to node-local /tmp" >&2; exit 1; }
+  grep -q 'NCSA_TMP_ROOT=/work/hdd/verified/user/verified-repo/verified-repo/tmp' .ncsa/runs/label-one/stage/ncsa-job.sh ||
+    { echo "FAIL: job script does not point scratch at the project tmp root" >&2; exit 1; }
+
+  # fetch: results_dir resolution (artifacts/ detected), repo-locked, receipt,
+  # close-out commands; --dest removed; second fetch refused.
+  PATH="$ncsa_bin:$PATH" python3 "$ncsa_helper" fetch --run .ncsa/runs/label-one \
+    --relative results/synthetic-result --storage data >/tmp/research-skills-ncsa-fetch.txt
+  [[ -f artifacts/label-one/results/synthetic-result/result.json ]] ||
+    { echo "FAIL: fetch did not land under the detected artifacts/ results_dir" >&2; exit 1; }
+  [[ -f artifacts/fetched/label-one.json ]] ||
+    { echo "FAIL: fetch receipt missing" >&2; exit 1; }
+  grep -q '"manifest_sha256"' artifacts/fetched/label-one.json ||
+    { echo "FAIL: fetch receipt lacks the manifest hash" >&2; exit 1; }
+  grep -q 'git -C .* add artifacts/label-one artifacts/fetched/label-one.json' /tmp/research-skills-ncsa-fetch.txt &&
+    grep -q 'git -C .* push' /tmp/research-skills-ncsa-fetch.txt ||
+    { echo "FAIL: fetch did not print the same-session close-out commands" >&2; exit 1; }
+  if PATH="$ncsa_bin:$PATH" python3 "$ncsa_helper" fetch --run .ncsa/runs/label-one \
+      --relative results/synthetic-result --storage data --dest somewhere \
+      >/tmp/research-skills-ncsa-fetch-dest.txt 2>&1; then
+    echo "FAIL: --dest override was accepted" >&2
+    exit 1
+  fi
+  grep -q 'unrecognized arguments' /tmp/research-skills-ncsa-fetch-dest.txt ||
+    { echo "FAIL: --dest removal not enforced by argparse" >&2; exit 1; }
+  if PATH="$ncsa_bin:$PATH" python3 "$ncsa_helper" fetch --run .ncsa/runs/label-one \
+      --relative results/synthetic-result --storage data \
+      >/tmp/research-skills-ncsa-fetch-2.txt 2>&1; then
+    echo "FAIL: a second fetch of the same run was allowed" >&2
+    exit 1
+  fi
+  grep -q 'already fetched' /tmp/research-skills-ncsa-fetch-2.txt ||
+    { echo "FAIL: second-fetch refusal lacked the never-overwrite reason" >&2; exit 1; }
+
+  # audit: snippet emission, POSIX syntax, read-only local run, classification
+  python3 "$ncsa_helper" audit --config .ncsa/config.json --emit > audit.sh
+  sh -n audit.sh || { echo "FAIL: audit snippet is not valid POSIX shell" >&2; exit 1; }
+  grep -q 'du -sk' audit.sh && grep -q "stat -c '%Y'" audit.sh ||
+    { echo "FAIL: audit snippet lacks size/mtime collection" >&2; exit 1; }
+  grep -q '/work/hdd/verified/user' audit.sh && grep -q '/projects/verified/user' audit.sh ||
+    { echo "FAIL: audit snippet does not scan both allocation user dirs" >&2; exit 1; }
+  sh audit.sh >/tmp/research-skills-ncsa-audit-local.txt
+  grep -q '## ncsa audit v1 begin' /tmp/research-skills-ncsa-audit-local.txt &&
+    grep -q '## ncsa audit v1 end' /tmp/research-skills-ncsa-audit-local.txt &&
+    grep -q 'missing-root' /tmp/research-skills-ncsa-audit-local.txt ||
+    { echo "FAIL: audit snippet did not degrade to missing-root notes off-Delta" >&2; exit 1; }
+  sed -n '/^classify() {/,/^}/p' audit.sh > /tmp/research-skills-ncsa-classify.sh
+  cat >> /tmp/research-skills-ncsa-classify.sh <<'DRIVER'
+check() {
+  result=$(classify "$1")
+  if [ "$result" != "$2" ]; then
+    echo "classify $1 -> $result (expected $2)" >&2
+    exit 1
+  fi
+}
+check '/work/hdd/verified/user/verified-repo' REGISTERED
+check '/projects/verified/user/verified-repo' REGISTERED
+check '/work/hdd/verified/user/verified-repo/runs/label-one' INTERNAL
+check '/work/hdd/verified/user/stray' ORPHAN
+DRIVER
+  sh /tmp/research-skills-ncsa-classify.sh ||
+    { echo "FAIL: audit classify() misclassified fixture paths" >&2; exit 1; }
+
+  # audit paste-back parsing: fixture report, then malformed refusal
+  {
+    printf '%s\n' '## ncsa audit v1 begin'
+    printf '%s\n' '## host=delta-login-1 user=verified utc=2026-11-01T00:00:00Z'
+    printf 'REGISTERED\t%d\t%d\t%s\n' 1024 1761916800 '/work/hdd/verified/user/verified-repo'
+    printf 'INTERNAL\t%d\t%d\t%s\n' 512 1761916801 '/work/hdd/verified/user/verified-repo/old'
+    printf 'ORPHAN\t%d\t%d\t%s\n' 64 1761000000 '/work/hdd/verified/user/stray'
+    printf '%s\n' '## ncsa audit v1 end'
+  } > /tmp/research-skills-ncsa-report.txt
+  python3 "$ncsa_helper" audit --parse /tmp/research-skills-ncsa-report.txt \
+    >/tmp/research-skills-ncsa-parse.txt
+  grep -q '"orphan_count": 1' /tmp/research-skills-ncsa-parse.txt &&
+    grep -q '"REGISTERED"' /tmp/research-skills-ncsa-parse.txt &&
+    grep -q 'delta-login-1' /tmp/research-skills-ncsa-parse.txt ||
+    { echo "FAIL: audit parse summary incomplete" >&2; exit 1; }
+  printf 'not an audit report\n' > /tmp/research-skills-ncsa-report-bad.txt
+  if python3 "$ncsa_helper" audit --parse /tmp/research-skills-ncsa-report-bad.txt \
+      >/tmp/research-skills-ncsa-parse-bad.txt 2>&1; then
+    echo "FAIL: audit parse accepted a report without markers" >&2
+    exit 1
+  fi
+) || fail "ncsa CLI end-to-end (prepare/fetch/audit with stub fixtures) failed"
+pass "ncsa CLI e2e: project resolution, run id refusal, artifacts/ results_dir fetch + receipt + close-out, --dest removed, audit emit/classify/parse"
+
+rm -rf "$ncsa_bin" "$ncsa_repo"
+
 pass "all validations completed"

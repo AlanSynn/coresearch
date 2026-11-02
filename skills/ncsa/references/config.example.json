@@ -3,6 +3,7 @@
   "account": "",
   "compute_root": "",
   "data_root": "",
+  "project": "",
   "filesystem_dependencies": ["projects", "work"],
   "partition": "gpuA40x4",
   "minutes": 30,

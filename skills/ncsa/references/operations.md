@@ -29,6 +29,17 @@ Roots are not the filesystem's
 top-level shared directory. Configure a verified bootstrap Python separately in
 the project worker's environment settings.
 
+`project` is required: one root per project. Set it explicitly, or let the
+helper take the repository's git remote basename — the local directory name is
+never used (a checkout may be `kamino` while the storage project is
+`kamino-research`). All staging and results live at
+`<compute_root>/<project>/runs/<id>/{stage,results}`, shared scratch at
+`<compute_root>/<project>/tmp`; the helper refuses sibling or hand-made
+staging directories anywhere else, and refuses layout paths that are symlinks
+pointing outside the structure. `results_dir` is optional (default `results/`);
+when the repository already uses an `artifacts/` convention it is detected and
+used as the locked fetch destination.
+
 ```sh
 mkdir -p .ncsa
 cp skills/ncsa/references/config.example.json .ncsa/config.json
@@ -69,17 +80,24 @@ project dependency, not the entire workspace.
 python3 skills/ncsa/scripts/ncsa.py prepare \
   --config .ncsa/config.json --source . \
   --include scripts --include src \
-  --out .ncsa/runs/first-check \
+  --out .ncsa/runs/first-check --run-id first-check \
   --entry bash scripts/my_gpu_job.sh
 python3 skills/ncsa/scripts/ncsa.py stage --run .ncsa/runs/first-check
 python3 skills/ncsa/scripts/ncsa.py submit --run .ncsa/runs/first-check
 python3 skills/ncsa/scripts/ncsa.py status --run .ncsa/runs/first-check
 ```
 
-`my_gpu_job.sh` is the user's actual prepared entry; the generic skill supplies no
-such job. Read the project's worker guide for its concrete command. `stage` creates
-a new remote run, performs read-only preflight, uploads without deletion, and checks
-the exact staged file set, hashes and modes. `submit` repeats both integrity
+The run ID is a user label or a short sha (`--run-id`); without it, prepare uses
+the repository HEAD short sha. A timestamp is only a disambiguator when a label
+already exists — an existing run is never reused or overwritten. The job entry
+receives `NCSA_RUN_ROOT`, `NCSA_RESULTS` (the run's `results/` directory),
+`NCSA_TMP_ROOT` (`<compute_root>/<project>/tmp`) and a `TMPDIR` that defaults to
+node-local `/tmp`. Scratch belongs there — never `$HOME`, never per-session
+stamped directories. `stage` creates a new remote run under
+`<compute_root>/<project>/runs/<id>/` with `stage/`, `results/` and `logs/`
+subdirectories, performs read-only preflight, uploads without deletion, checks
+the exact staged file set, hashes and modes, and writes `meta.json` (git sha,
+config hash, host) into the run directory. `submit` repeats both integrity
 verification and preflight before one bounded `sbatch` call. Slurm captures the
 manifest digest with the batch script; the job checks that digest and all files
 again before starting the entry command. Queued-time changes are refused. The
@@ -103,21 +121,57 @@ prepare a new run with the correction and prior attempt recorded. For a partiall
 completed batch, use the project's explicit hash-checked resume mechanism; do not
 overwrite accepted raw results. The helper provides no cancellation command.
 
-Fetch a named output path into a fresh local directory:
+Fetch a named result path into the repository's locked results directory:
 
 ```sh
 python3 skills/ncsa/scripts/ncsa.py fetch --run .ncsa/runs/first-check \
-  --relative artifacts/results/first-check --out artifacts/received/first-check
+  --relative first-check-metrics
 ```
 
-This path must name actual results in the staged repository. For a worker writing
-to configured project data storage, pass `--storage data --relative results/<run>`;
-data-root retrieval is restricted to named `results/` directories. The helper compares
+There is no destination override. Files land at
+`<repository>/<results_dir>/<run_id>/` — `results_dir` comes from the frozen
+configuration (`results/` by default, `artifacts/` when the repository already
+uses that convention), and the run directory must live inside the user's git
+repository. A second fetch of the same run is refused; results are never
+overwritten. The helper also writes a receipt at
+`<results_dir>/fetched/<run_id>.json` containing the run ID, remote run root,
+manifest hash, git sha, and the verified file count, and prints the exact git
+commands to commit the fetched results plus receipt and push. Close out in the
+same session — an unfetched or uncommitted result is an unfinished experiment.
+
+For a worker writing to configured project data storage, pass
+`--storage data --relative results/<run>`; data-root retrieval is restricted to
+named `results/` directories. Without `--storage data`, retrieval is bounded to
+the run's own remote `results/` directory. The helper compares
 the exact fetched file set, hashes and modes with a remote inventory. Symlinks,
 including a named result directory pointing elsewhere, and changed files fail
 verification.
 It does not judge scientific validity. Avoid syncing environments, weights or the
 whole work tree.
+
+## Auditing allocation storage
+
+Emit the audit snippet from the project that owns the configurations:
+
+```sh
+python3 skills/ncsa/scripts/ncsa.py audit --config .ncsa/config.json --emit > /tmp/ncsa-audit.sh
+```
+
+Repeat `--config` to register several projects in one audit. The snippet is
+self-contained and read-only (`hostname`, `id`, `date`, `du`, `stat` only); the
+helper never assumes non-interactive SSH, so the user runs it inside their own
+interactive Kerberos+Duo Delta session and pastes the complete output back:
+
+```sh
+python3 skills/ncsa/scripts/ncsa.py audit --parse pasted-report.txt
+```
+
+The parse summarizes every top-level entry of `/work/hdd/<account>/<user>` and
+`/projects/<account>/<user>` as REGISTERED (matches a configured project root or
+contains one), INTERNAL (inside a registered root), or ORPHAN (unregistered),
+with size, mtime, orphan paths, and any roots that were missing remotely. Use it
+before staging new runs and after finishing with a project to confirm no stray
+data remains outside the managed run structure.
 
 Large result directories can take more than the default 120 seconds to enumerate
 and hash remotely. Only `fetch` accepts `--inventory-timeout-seconds`, bounded to

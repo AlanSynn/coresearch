@@ -1,6 +1,6 @@
 ---
 name: ncsa
-description: Operate NCSA Delta allocations and storage for GPU experiments, including account and queue inspection, frozen staging, bounded Slurm submission, tracking, and targeted result retrieval. Use when the user selects NCSA Delta; do not apply PACE/Phoenix defaults or DeltaAI node recipes.
+description: Operate NCSA Delta allocations and storage for GPU experiments, including account and queue inspection, frozen staging under one root per project, bounded Slurm submission, tracking, audited storage, and result retrieval into the repository's locked results directory. Use when the user selects NCSA Delta; do not apply PACE/Phoenix defaults or DeltaAI node recipes.
 ---
 
 # NCSA Delta
@@ -17,6 +17,27 @@ system facts with exact Slurm/storage examples. Use this skill's absolute
 user's SSH alias + rsync + remote Slurm). Read any project-specific Delta guide
 before choosing an entry command (in the motion-editing repository:
 `skills/ncsa/references/motion-preserve.md`, separate from this skill).
+
+## Run discipline
+
+- One root per project. All staging and results live at
+  `<compute_root>/<project>/runs/<id>/{stage,results}` plus
+  `<compute_root>/<project>/tmp` for shared scratch. The helper refuses to
+  stage anywhere else, including sibling or hand-made staging directories.
+- `project` is an explicit `.ncsa/config.json` field; the only automatic
+  fallback is the repository's git remote basename. The local directory name
+  is never used (a checkout may be `kamino` while storage is `kamino-research`).
+- Run IDs are a user label or a short sha (`prepare --run-id`, default HEAD
+  short sha); a timestamp is only a disambiguator for label collisions. Staging
+  writes `meta.json` (git sha, config hash, host) into the run directory.
+- Scratch goes to node-local `/tmp` or `<compute_root>/<project>/tmp`. Never
+  `$HOME`, never per-session stamped directories.
+- Results are fetched only into the repository's locked `results_dir`
+  (`results/` by default, `artifacts/` when the repository already uses that
+  convention), never to a per-fetch destination, and each fetch writes a
+  receipt under `<results_dir>/fetched/<run_id>.json`.
+- Close out in the same session: after a fetch, commit the fetched results
+  plus receipt and push. The helper prints the exact git commands.
 
 ## Connect
 
@@ -60,12 +81,24 @@ before choosing an entry command (in the motion-editing repository:
    `sacct` with the unique job name/ID before retrying. The helper preserves the
    attempt record and remote lock; it does not auto-resubmit. Never cancel the
    user's other jobs to make room.
-4. Fetch named result directories only. Check hashes, job exit status, model
-   provenance, and experiment gates separately — a successful upload or CPU test
-   is not a successful GPU experiment. Preserve failures and rejected candidates.
+4. Fetch named result directories only, into the repository's locked
+   `results_dir`. Check hashes, job exit status, model provenance, and
+   experiment gates separately — a successful upload or CPU test is not a
+   successful GPU experiment. Preserve failures and rejected candidates, then
+   commit and push the fetched results and receipt in the same session.
 5. Diagnose before retrying; stop after three repetitions of the same failure.
    Resume a preempted batch only with a verified resume boundary or an explicitly
    accounted new run.
+
+## Audit storage
+
+`ncsa.py audit --config .ncsa/config.json --emit` prints a self-contained POSIX
+shell snippet. The user runs it inside their own interactive Kerberos+Duo Delta
+session and pastes the full output back to `ncsa.py audit --parse`; the helper
+then summarizes each top-level entry of `/work/hdd/<account>/<user>` and
+`/projects/<account>/<user>` as REGISTERED (matches a configured project root),
+INTERNAL (inside one), or ORPHAN, with size and mtime. The helper never assumes
+non-interactive SSH for this, and the snippet is read-only.
 
 The helper's hashes establish consistency of captured files, not remote
 attestation, model quality, or cross-machine determinism. Keep prepared,

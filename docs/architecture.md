@@ -72,6 +72,10 @@ The downloader assumes an authorized, curated URL manifest, pins TLS to validate
 public DNS answers, and retains partial results in a fresh directory. DNS and
 socket timeouts are not a wall-clock job scheduler. Host limits remain necessary
 for hard deadlines. It does not parse or execute downloaded documents.
+The Delta helper (`skills/coresearch/scripts/ncsa.py`, documented as the NCSA
+Delta resource) likewise owns only deterministic mechanics: run layout,
+inventory hashing, retrieval receipts, and audit snippets. The allocation,
+account, and interactive Kerberos+Duo session remain the user's.
 
 ## Migration from version 1
 

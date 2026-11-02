@@ -138,6 +138,9 @@ overwritten. The helper also writes a receipt at
 manifest hash, git sha, and the verified file count, and prints the exact git
 commands to commit the fetched results plus receipt and push. Close out in the
 same session — an unfetched or uncommitted result is an unfinished experiment.
+Path parity: pace records its receipts at `runs/fetched/<run_id>.json`, while
+ncsa receipts live inside the repository's configured `results_dir` — grep the
+right path per cluster.
 
 For a worker writing to configured project data storage, pass
 `--storage data --relative results/<run>`; data-root retrieval is restricted to

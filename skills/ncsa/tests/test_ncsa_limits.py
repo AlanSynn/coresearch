@@ -21,6 +21,12 @@ CONFIG = {'host': 'delta', 'account': 'verified-delta-gpu',
 
 
 class Limits(unittest.TestCase):
+    def test_run_id_pattern_literal_stays_in_sync_with_run_layout(self):
+        # RUN_LAYOUT runs remotely and cannot reference module constants, so
+        # the run-ID pattern is duplicated there; this fails on drift locally
+        # instead of relying on the remote fullmatch backstop.
+        self.assertIn("re.fullmatch(r'" + ncsa.RUN_ID_RE + "', run_id)", ncsa.RUN_LAYOUT)
+
     def test_normal_and_interactive_partition_bounds(self):
         for partition in sorted(ncsa.PARTITIONS):
             limit = 60 if partition.endswith('-interactive') else 120

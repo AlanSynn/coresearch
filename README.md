@@ -42,21 +42,43 @@ Neither installation nor research work requires changing global or project
 ## What the skill adds
 
 Only its name and short description need discovery. The loaded
-[skill](skills/coresearch/SKILL.md) establishes lead ownership and exposes five
+[skill](skills/coresearch/SKILL.md) establishes lead ownership and exposes six
 independent resources, not a pipeline:
 
 | Resource | Research capability |
 |---|---|
 | [Literature](skills/coresearch/references/literature.md) | Source-grounded synthesis, closest work, citation provenance, optional PDF collection |
 | [Experiments](skills/coresearch/references/experiments.md) | Contribution design, falsifiers, baselines, executable evaluation, reproducible artifacts |
+| [Engineering](skills/coresearch/references/engineering.md) | SOLID/DDD, research-code maturity, architectural decisions, executable contracts, reliable execution |
 | [Analysis](skills/coresearch/references/analysis.md) | Gaps, contradictory findings, causal explanations, qualitative analysis, evidence-chain audits |
 | [Manuscripts](skills/coresearch/references/manuscripts.md) | Writing, figures/slides, venue critique, rebuttal, verification, release |
-| [Delegation](skills/coresearch/references/delegation.md) | Bounded assignments and compact handoffs for native workers, including Claude Code Sonnet/Opus |
+| [Delegation](skills/coresearch/references/delegation.md) | Coarse assignments, event-driven handoffs, and native workers, including Sol and Claude Code |
 
 Astra owns consequential decisions and final interpretation. Workers own a clear
 scope, relevant inputs, an expected artifact, and completion criteria. The host
 supplies execution, permissions, and completion events. No model registry,
 polling service, mandatory reviewer chain, or transcript ingestion is added.
+
+## Lead ownership without constant check-ins
+
+Keep Astra on problem framing, consequential decisions, difficult coupled work,
+and final synthesis. Delegate self-contained work to a capable configured worker,
+including GPT-6.1 Sol when appropriate. Workers own local execution and validation;
+they do not need the lead's approval after each step. Completion, blockers, and
+material decision changes justify communication. Routine progress polling does not.
+The host owns telemetry, task supervision, permissions, and completion delivery.
+
+This is a default to evaluate, not a claim that hierarchy always beats one agent.
+Compare direct Astra, direct Sol, and selective delegation on the same research
+and engineering tasks. See the [decision rationale](docs/architecture.md) and
+[host evaluation protocol](docs/validation.md). Model selection and heterogeneous
+workers remain host capabilities, not features installed by this skill.
+
+An optional [personal instruction example](examples/astra-AGENTS.md) captures
+cross-project research and engineering expectations in English. It is outside the
+installable payload, is never imported automatically, and does not replace this
+repository's maintenance `AGENTS.md`. Adapt only what your host and projects need;
+skill use does not require installing this example or loading it into workers.
 
 ## Optional project continuity
 

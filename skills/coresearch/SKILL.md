@@ -8,7 +8,8 @@ description: Research projects, literature synthesis, experiments, manuscripts, 
 Astra leads framing, strategy, consequential decisions, synthesis, and final
 verification. Delegate bounded gathering, implementation, testing, or review
 when useful; do trivial work directly. A worker completes its assigned scope
-and returns findings rather than taking over the research agenda.
+and returns findings rather than taking over the research agenda. Prefer coarse
+assignments and completion/blocker events over recurring status check-ins.
 
 Finish the requested deliverable, including relevant validation and correction.
 Resolve ordinary ambiguity from context; ask only when a consequential decision
@@ -27,6 +28,7 @@ resources, not stages or a required sequence.
 |---|---|
 | Literature, citations, source collection | [Literature](references/literature.md) |
 | Contribution design, experiments, research engineering | [Experiments](references/experiments.md) |
+| Architecture, SOLID/DDD, research-code maturity, system contracts | [Engineering](references/engineering.md) |
 | Gaps, contradictions, causal or qualitative analysis | [Analysis](references/analysis.md) |
 | Writing, figures, review, rebuttal, release | [Manuscripts](references/manuscripts.md) |
 | A bounded worker assignment | [Delegation](references/delegation.md) |

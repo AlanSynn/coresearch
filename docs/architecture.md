@@ -14,7 +14,8 @@ and warn that guidance written for weaker models can hold the strongest ones bac
 agreement and `host/<host>.md` the few lines specific to one host. `scripts/coresearch.py host install` renders one
 generated instruction file per host, links every skill in `skills/` into each host's skills directory, links
 `glm-delegate` onto the PATH, and installs the rules that enforce the confirmation boundary (Codex rules, Claude Code
-permission rules). Procedures moved out of the always-loaded files into skills: `engineering` (the former
+permission rules) and Claude Code's default effort for Fable 5.2, `high`, which its guide recommends for research and
+long agentic work and which Claude Code would otherwise leave at `medium`. Procedures moved out of the always-loaded files into skills: `engineering` (the former
 Claude Code policy, split by topic with its text unchanged), `glm-delegate` and `disk-archive`.
 
 This replaces version 2's boundary that Coresearch never edits host configuration or global prompts, **for the `host`
@@ -26,8 +27,9 @@ generated file edited by hand, unless `--replace` is given, and then moves the o
 `~/.local/state/coresearch/backups/<UTC time>/`, outside every directory a host scans for skills or rules. New files
 and links are staged beside their destination and swapped in, so a failure leaves the original in place; a generated
 file reached through a link, such as a dotfiles checkout, is rewritten at the link's target. In a host's settings file
-the command only adds the permission rules it manages, after a backup, keeping the file's link and permission bits,
-and leaves a file with an unexpected structure alone. `host check` reports any managed file, link or rule that differs
+the command only adds the settings it manages, after a backup, keeping the file's link and permission bits: a list
+gains the entries it lacks, any other value is set only where its key is absent, so a level the user saved stays, and a
+file with an unexpected structure is left alone. `host check` reports any managed file, link or rule that differs
 from the checkout.
 
 **Alternatives considered.** A single file symlinked into every host was rejected because Codex has no import mechanism

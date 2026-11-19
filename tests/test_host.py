@@ -102,20 +102,41 @@ class HostTests(unittest.TestCase):
         settings = self.home / ".claude/settings.json"
         settings.parent.mkdir(parents=True)
         settings.write_text('{"theme": "dark", "permissions": {"ask": ["Bash(rm *)"]}}\n')
-        wanted = installer.json.loads((ROOT / "host/claude.permissions.json").read_text())["ask"]
-        self.assertTrue(any(p.startswith("missing permission rules") for p in installer.host_check(self.home, ["claude"])))
+        wanted = installer.json.loads((ROOT / "host/claude.settings.json").read_text())
+        self.assertTrue(any(p.startswith("missing settings") for p in installer.host_check(self.home, ["claude"])))
         installer.host_install(self.home, ["claude"])
         data = installer.json.loads(settings.read_text())
         self.assertEqual(data["theme"], "dark")
-        self.assertEqual(data["permissions"]["ask"], ["Bash(rm *)"] + wanted)
+        self.assertEqual(data["permissions"]["ask"], ["Bash(rm *)"] + wanted["permissions"]["ask"])
+        self.assertEqual(data["modelSettings"], wanted["modelSettings"])
         self.assertEqual(len(list((self.home / installer.BACKUPS).glob("*/.claude/settings.json"))), 1)
         self.assertEqual(installer.host_install(self.home, ["claude"]), [])
         self.assertEqual(installer.host_check(self.home, ["claude"]), [])
 
+    def test_effort_level_the_user_chose_is_kept(self):
+        settings = self.home / ".claude/settings.json"
+        settings.parent.mkdir(parents=True)
+        chosen = {"claude-fable-5-2": {"effortLevel": "xhigh", "autoCompactWindow": "auto"},
+                  "claude-opus-5-5": {"effortLevel": "xhigh"}}
+        settings.write_text(installer.json.dumps({"modelSettings": chosen}))
+        installer.host_install(self.home, ["claude"])
+        self.assertEqual(installer.json.loads(settings.read_text())["modelSettings"], chosen)
+        self.assertEqual(installer.host_check(self.home, ["claude"]), [])
+
+    def test_effort_level_is_added_beside_other_model_settings(self):
+        settings = self.home / ".claude/settings.json"
+        settings.parent.mkdir(parents=True)
+        settings.write_text('{"modelSettings": {"claude-fable-5-2": {"autoCompactWindow": "auto"}}}')
+        self.assertIn("modelSettings.claude-fable-5-2.effortLevel = high", "\n".join(installer.host_check(self.home, ["claude"])))
+        installer.host_install(self.home, ["claude"])
+        self.assertEqual(installer.json.loads(settings.read_text())["modelSettings"],
+                         {"claude-fable-5-2": {"autoCompactWindow": "auto", "effortLevel": "high"}})
+
     def test_unusable_settings_are_left_alone(self):
         settings = self.home / ".claude/settings.json"
         settings.parent.mkdir(parents=True)
-        for text in ("not json", '{"permissions": {"ask": "Bash(git push *)"}}'):
+        for text in ("not json", "[]", '{"permissions": {"ask": "Bash(git push *)"}}', '{"modelSettings": "high"}',
+                     '{"modelSettings": {"claude-fable-5-2": "high"}}'):
             with self.subTest(text=text):
                 settings.write_text(text)
                 actions = installer.host_install(self.home, ["claude"])

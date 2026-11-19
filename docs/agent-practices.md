@@ -68,7 +68,7 @@ they indicate direction, not what to expect here.
 |---|---|---|
 | Shared core | Who the user is, precedence, what a request authorizes, evidence and report standards, pointers to skills | [`host/core.md`](../host/core.md), rendered into every host's global file by `coresearch.py host install` |
 | Host addition | The few lines only one host needs (Monitor in Claude Code, subagents in Codex, no self-delegation on GLM) | `host/<host>.md` |
-| Enforced rules | What must hold every time | Codex [`host/codex.rules`](../host/codex.rules); Claude Code [`host/claude.permissions.json`](../host/claude.permissions.json), merged into `settings.json`; project checks such as flatpack's pin check |
+| Enforced rules | What must hold every time | Codex [`host/codex.rules`](../host/codex.rules); Claude Code [`host/claude.settings.json`](../host/claude.settings.json), merged into `settings.json`; project checks such as flatpack's pin check |
 | Skills | Procedures loaded on demand | [`coresearch`](../skills/coresearch/SKILL.md), [`engineering`](../skills/engineering/SKILL.md), [`glm-delegate`](../skills/glm-delegate/SKILL.md), [`disk-archive`](../skills/disk-archive/SKILL.md) |
 | Project | Mission, contracts, commands, protected files | The repository's `AGENTS.md` |
 | Memory | Corrections and confirmed approaches, one per file | The host's memory; prune cautions whose reason no longer holds |

@@ -24,8 +24,10 @@ This writes one generated instruction file per host (`~/.claude/CLAUDE.md`,
 links every skill into `~/.claude/skills` (which opencode also reads),
 `~/.codex/skills` and `~/.pi/agent/skills`, links `glm-delegate` into
 `~/.local/bin`, links the Codex rules in `host/codex.rules` into `~/.codex/rules`,
-and adds the permission rules in `host/claude.permissions.json` to
-`~/.claude/settings.json` without touching its other settings. Edit
+and adds the settings in `host/claude.settings.json` (the confirmation rules for
+`git push` and `git clean`, and `high` effort for Fable 5.2) to
+`~/.claude/settings.json` without touching its other settings; a value already
+there, such as an effort level saved with `/effort`, is kept. Edit
 `host/core.md` or `host/<host>.md`, never the generated files: each generated
 file records a digest of its text, and one edited by hand is preserved like a
 file the command did not create. Such files are replaced only with `--replace`,

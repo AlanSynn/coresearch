@@ -1,10 +1,12 @@
 # Bounded delegation
 
-Use the host's native workers or a configured Claude Code process, not a
-Coresearch runtime. Sonnet or Opus can handle substantial exploration,
-implementation, tests, and independent audits. Luna/Sol or other capable workers
-are also options. Choose by task and available tools, not a fixed model ladder.
-Astra retains architecture, ambiguous/high-impact decisions, synthesis, and final
+Use the host's native workers, a configured Claude Code or Codex process, or GLM
+through the `glm-delegate` skill, not a Coresearch runtime. Sonnet, Opus or Sol can
+handle substantial exploration, implementation, tests, and independent audits.
+GLM suits bulk digests of large logs or document sets and mechanical edits whose
+result you can check cheaply. Choose by task and available tools, not a fixed
+model ladder.
+The lead retains architecture, ambiguous/high-impact decisions, synthesis, and final
 verification. Delegation is optional, including for small research tasks.
 
 A useful assignment contains the objective, only the relevant context/paths,
@@ -23,7 +25,7 @@ or revision the tests exercised.
 Launch once, then do independent lead work or wait on the host's completion
 mechanism. Consume the completed result when it informs a decision. Do not build
 status-polling loops, repeated progress requests, or automatic reviewer chains.
-On a blocked result, Astra decides whether to rescope, supply missing context,
+On a blocked result, the lead decides whether to rescope, supply missing context,
 change workers, or do the task directly. Never claim a worker ran when no runtime
 was available.
 
@@ -33,6 +35,13 @@ non-interactive interface can consume a bounded brief and emit a final handoff:
 ```bash
 claude -p --model sonnet "$(cat task.md)" > handoff.md
 # Use --model opus for a task better suited to that worker.
+
+codex exec --sandbox read-only -o handoff.md "$(cat task.md)" < /dev/null
+# Use --sandbox workspace-write for an implementation worker in a worktree. Close stdin: when
+# it is an open pipe, as in a background shell, codex exec waits for more input indefinitely.
+
+glm-delegate --cwd /path/to/project < task.md > handoff.md
+# Read-only by default; see the glm-delegate skill before using --write.
 ```
 
 The brief is task-local, not persistent repository instruction. Use the host's

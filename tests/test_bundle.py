@@ -16,13 +16,15 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class BundleTests(unittest.TestCase):
-    def test_single_skill_and_routing_metadata(self):
-        paths = list((ROOT / "skills").glob("*/SKILL.md"))
-        self.assertEqual(paths, [ROOT / "skills/coresearch/SKILL.md"])
-        metadata = paths[0].read_text().split("---", 2)[1]
-        self.assertEqual(set(re.findall(r"^(\w+):", metadata, re.M)), {"name", "description"})
-        self.assertIn("name: coresearch", metadata)
-        self.assertLess(len(metadata.split("description:")[1].strip()), 160)
+    def test_skills_carry_routing_metadata_only(self):
+        paths = sorted((ROOT / "skills").glob("*/SKILL.md"))
+        self.assertIn(ROOT / "skills/coresearch/SKILL.md", paths)
+        for path in paths:
+            with self.subTest(skill=path.parent.name):
+                metadata = path.read_text().split("---", 2)[1]
+                self.assertEqual(set(re.findall(r"^(\w+):", metadata, re.M)), {"name", "description"})
+                self.assertIn(f"name: {path.parent.name}", metadata)
+                self.assertLess(len(metadata.split("description:")[1].strip()), 160)
         plugin = json.loads((ROOT / ".codex-plugin/plugin.json").read_text())
         self.assertEqual(plugin["name"], "coresearch")
         self.assertTrue((ROOT / plugin["skills"]).is_dir())
@@ -44,8 +46,8 @@ class BundleTests(unittest.TestCase):
             self.assertFalse((ROOT / path).exists(), path)
 
     def test_runtime_imports_are_standard_library_only(self):
-        for path in (ROOT / "scripts/coresearch.py", ROOT / "skills/coresearch/scripts/fetch_sources.py",
-                     ROOT / "skills/coresearch/scripts/ncsa.py"):
+        for path in (ROOT / "scripts/coresearch.py", ROOT / "scripts/fetch_guides.py",
+                     ROOT / "skills/coresearch/scripts/fetch_sources.py", ROOT / "skills/coresearch/scripts/ncsa.py"):
             for node in ast.walk(ast.parse(path.read_text())):
                 if isinstance(node, ast.Import):
                     names = [alias.name.split(".")[0] for alias in node.names]

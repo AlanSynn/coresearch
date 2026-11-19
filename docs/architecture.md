@@ -1,6 +1,46 @@
 # Architecture and migration
 
-## Starting point and decision
+## Version 3: one source for the agents' standing instructions (2026-11-18)
+
+**Context.** The same user works through Claude Code, Codex, pi and opencode. Their global instruction files had
+drifted apart: a 26 KB, 180-line engineering policy for Claude Code, an 11 KB research stance for Codex, and a GLM
+delegation block copied into four files. Codex reads at most 32 KiB of global plus project instructions, and the
+Codex global and flatpack's project file together had reached 32,703 bytes. The current vendor guides for the
+strongest models (GPT-6.2 Astra and Sol, Claude Fable 5.2 and Opus 5.5; see [agent practices](agent-practices.md))
+recommend short, consistent standing instructions, decision boundaries stated once, and procedures loaded on demand,
+and warn that guidance written for weaker models can hold the strongest ones back.
+
+**Decision.** Coresearch is the single source for those instructions. `host/core.md` holds the shared working
+agreement and `host/<host>.md` the few lines specific to one host. `scripts/coresearch.py host install` renders one
+generated instruction file per host, links every skill in `skills/` into each host's skills directory, links
+`glm-delegate` onto the PATH, and installs the rules that enforce the confirmation boundary (Codex rules, Claude Code
+permission rules). Procedures moved out of the always-loaded files into skills: `engineering` (the former
+Claude Code policy, split by topic with its text unchanged), `glm-delegate` and `disk-archive`.
+
+This replaces version 2's boundary that Coresearch never edits host configuration or global prompts, **for the `host`
+command only**. `install` and `init` keep that boundary.
+
+**Safeguards.** Generated files start with an HTML comment naming their sources and a digest of their text; Claude Code
+strips such comments from its context. The `host` command refuses to overwrite a file it did not generate, or a
+generated file edited by hand, unless `--replace` is given, and then moves the original to
+`~/.local/state/coresearch/backups/<UTC time>/`, outside every directory a host scans for skills or rules. New files
+and links are staged beside their destination and swapped in, so a failure leaves the original in place; a generated
+file reached through a link, such as a dotfiles checkout, is rewritten at the link's target. In a host's settings file
+the command only adds the permission rules it manages, after a backup, keeping the file's link and permission bits,
+and leaves a file with an unexpected structure alone. `host check` reports any managed file, link or rule that differs
+from the checkout.
+
+**Alternatives considered.** A single file symlinked into every host was rejected because Codex has no import mechanism
+and each host needs a different addition. Hand-maintained files per host were the previous state and drifted within
+weeks. One long global file was rejected because of the Codex size cap and the vendors' guidance against long standing
+prompts.
+
+**Consequences.** A change to `host/core.md` reaches every host at once, so it is evaluated with
+[`evals/host-policy`](../evals/host-policy/README.md) before installation; the first evaluation and the revision it
+led to are in [validation](validation.md). Project instructions still take precedence over the core. Revisit this when a vendor guide changes materially (re-run `scripts/fetch_guides.py`) or an evaluation
+shows a regression.
+
+## Version 2: starting point and decision
 
 The inspected baseline is `d62ad4e0609b5ec912a2f7c0d3b0d378326e3f0f`.
 It bundled 15 skills, an explicit stage/re-entry router, cross-skill YAML state,

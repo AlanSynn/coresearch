@@ -1,0 +1,103 @@
+#!/bin/sh
+# glm-delegate: run one bounded task on the latest GLM through pi (subscription, no per-token cost).
+# The brief comes from stdin; GLM's final answer goes to stdout. Read-only unless --write.
+# Guards: no recursion, no session files, no context files, skills, extensions or MCP, hard timeout,
+# evidence-or-UNABLE system prompt, capped answer size (full text kept in a file), --write only on a
+# clean git tree with a change summary afterwards. The read tools are not confined to --cwd.
+# Model: highest plain zai/glm-X.Y that pi lists; override with GLM_DELEGATE_MODEL=provider/id.
+#
+# usage: glm-delegate [--write] [--cwd DIR] [--timeout SECONDS] [--thinking LEVEL] [--max-chars N] < brief.txt
+set -eu
+
+if [ "${GLM_DELEGATE:-}" = "1" ]; then
+  echo "glm-delegate: refusing nested delegation (GLM_DELEGATE is set)" >&2
+  exit 3
+fi
+
+tools="read,grep,find,ls"
+write=0
+cwd="$PWD"
+limit=900
+thinking="high"
+maxchars=12000
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --write)     tools="read,grep,find,ls,bash,edit,write"; write=1; shift ;;
+    --cwd)       cwd="$2"; shift 2 ;;
+    --timeout)   limit="$2"; shift 2 ;;
+    --thinking)  thinking="$2"; shift 2 ;;
+    --max-chars) maxchars="$2"; shift 2 ;;
+    -h|--help)   sed -n '2,9p' "$0"; exit 0 ;;
+    *) echo "glm-delegate: unknown option $1" >&2; exit 2 ;;
+  esac
+done
+
+for value in "$limit" "$maxchars"; do
+  case "$value" in ''|*[!0-9]*) echo "glm-delegate: --timeout and --max-chars take whole numbers" >&2; exit 2 ;; esac
+done
+
+model="${GLM_DELEGATE_MODEL:-}"
+if [ -z "$model" ]; then
+  id=$(timeout -k 5 60 pi --list-models glm --no-extensions --no-context-files 2>/dev/null \
+    | awk '$1=="zai" && $2 ~ /^glm-[0-9.]+$/ {print $2}' | sort -V | tail -1)
+  if [ -z "$id" ]; then
+    echo "glm-delegate: could not find a zai GLM model in 'pi --list-models glm'" >&2
+    exit 4
+  fi
+  model="zai/$id"
+fi
+
+tmp=$(mktemp -d "${TMPDIR:-/tmp}/glm-delegate.XXXXXX")
+trap 'rm -f "$tmp/brief"; rmdir "$tmp" 2>/dev/null || true' EXIT
+cat > "$tmp/brief"
+if [ ! -s "$tmp/brief" ]; then
+  echo "glm-delegate: empty brief on stdin" >&2
+  exit 2
+fi
+
+rules='You are a delegate working for another engineer who will check your output. Stay inside the stated scope and files. Report only what you observed or ran, with file:line evidence; if you cannot establish something, say UNABLE and why instead of guessing. Do not commit, push, use the network, or touch secrets, protected or pinned files, or anything outside the scope. Keep the answer short: findings and evidence only, no restating of the task or of file contents. Finish with one line on what you did not verify.'
+
+cd "$cwd"
+if [ "$write" = 1 ]; then
+  # A clean tree makes GLM's changes exactly the diff afterwards; commit, stash or use a worktree first.
+  if ! git rev-parse --git-dir >/dev/null 2>&1; then
+    echo "glm-delegate: --write needs a git working tree so the changes can be reviewed" >&2
+    exit 5
+  fi
+  if [ -n "$(git status --porcelain | head -1)" ]; then
+    echo "glm-delegate: --write needs a clean tree; commit, stash or use a worktree first" >&2
+    exit 5
+  fi
+fi
+
+status=0
+started=$(date +%s)
+GLM_DELEGATE=1 timeout -k 30 "$limit" pi -p --no-session --no-extensions --no-skills --no-context-files \
+  --no-prompt-templates --no-mcp \
+  --model "$model" --thinking "$thinking" --tools "$tools" \
+  --append-system-prompt "$rules" "@$tmp/brief" \
+  "Carry out the task described in the attached brief and return the result." \
+  > "$tmp/out" || status=$?
+
+size=$(wc -c < "$tmp/out" | tr -d ' ')
+# One usage line per call, so the delegation thresholds can be checked against real use.
+logdir="${XDG_STATE_HOME:-$HOME/.local/state}/glm-delegate"
+mkdir -p "$logdir" 2>/dev/null && printf '{"time":"%s","model":"%s","write":%s,"brief_bytes":%s,"answer_bytes":%s,"seconds":%s,"exit":%s}\n' \
+  "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$(printf '%s' "$model" | tr -d '"\\')" "$write" "$(wc -c < "$tmp/brief" | tr -d ' ')" "$size" \
+  "$(( $(date +%s) - started ))" "$status" >> "$logdir/calls.jsonl" || true
+if [ "$size" -gt "$maxchars" ]; then
+  head -c "$maxchars" "$tmp/out"
+  printf '\n\n[glm-delegate: answer truncated at %s of %s chars; full text: %s/out]\n' "$maxchars" "$size" "$tmp"
+else
+  cat "$tmp/out"
+  rm -f "$tmp/out"; rmdir "$tmp" 2>/dev/null || true
+fi
+
+if [ "$write" = 1 ]; then
+  printf '\n[glm-delegate: model %s; change summary, read the diff by file, not all at once]\n' "$model"
+  git diff HEAD --stat=100 | head -40
+  git status --short | grep '^??' | head -20 || true
+else
+  printf '\n[glm-delegate: model %s]\n' "$model" >&2
+fi
+exit "$status"

@@ -1,0 +1,193 @@
+#!/usr/bin/env python3
+"""Run the host-policy evaluation: each task under each instruction arm on each host, in isolated workspaces.
+
+Arms differ only in the global instructions and the skills they ship. Claude Code runs with
+`--setting-sources project,local`, so the user's own CLAUDE.md, settings and skills stay out; the arm's global
+instructions sit in a CLAUDE.md above the task repository and its skills in the repository's `.claude/skills`.
+Codex runs with a temporary CODEX_HOME holding the arm's AGENTS.md, a minimal config and the arm's skills; a copy of
+the user's auth.json is placed there for the run and deleted right after it.
+"""
+from __future__ import annotations
+
+import argparse
+import concurrent.futures as futures
+import datetime as dt
+import importlib.util
+import json
+import os
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+ROOT = HERE.parents[1]
+sys.path.insert(0, str(HERE))
+import tasks as task_module  # noqa: E402
+
+spec = importlib.util.spec_from_file_location("coresearch_cli", ROOT / "scripts/coresearch.py")
+cli = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(cli)
+
+CLAUDE_SETTINGS = json.dumps({"pluginConfigs": {"cc-plugin-agents-md@builtin": {"options": {"instructionFiles": "claude-md-and-agents-md"}}}})
+
+
+def arm_material(arm: str, host: str, baseline: Path) -> tuple[str, dict[str, Path]]:
+    """Global instructions text and {skill name: source dir} for an arm on a host."""
+    if arm == "candidate":
+        text = cli.render(host)
+        skills = {name: ROOT / "skills" / name for name in cli.skills()}
+    else:
+        text = (baseline / f"{host}_global.md").read_text(encoding="utf-8")
+        skills = {"coresearch": baseline / "skills/coresearch"}
+    if host == "codex":
+        skills["frontend-skill"] = baseline / "skills/frontend-skill"
+    return text, skills
+
+
+def copy_skills(skills: dict[str, Path], destination: Path) -> None:
+    destination.mkdir(parents=True, exist_ok=True)
+    for name, source in skills.items():
+        shutil.copytree(source.resolve(), destination / name, symlinks=False,
+                        ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+
+
+def run_one(task, host: str, arm: str, out: Path, baseline: Path, models: dict, timeout: int) -> dict:
+    workspace = out / f"{task.id}__{host}__{arm}"
+    repo = workspace / "repo"
+    workspace.mkdir(parents=True)
+    task.build(repo)
+    text, skills = arm_material(arm, host, baseline)
+    started = time.time()
+    record = {"task": task.id, "host": host, "arm": arm, "model": models[host]}
+    try:
+        if host == "claude":
+            (workspace / "CLAUDE.md").write_text(text, encoding="utf-8")
+            copy_skills(skills, repo / ".claude/skills")
+            exclude = repo / ".git/info/exclude" if (repo / ".git").is_dir() else None
+            if exclude:
+                exclude.parent.mkdir(parents=True, exist_ok=True)
+                with exclude.open("a") as stream:
+                    stream.write("\n.claude/skills/\n")
+            command = ["claude", "-p", "--model", models["claude"], "--effort", models["claude_effort"],
+                       "--setting-sources", "project,local", "--settings", CLAUDE_SETTINGS,
+                       "--permission-mode", "bypassPermissions", "--output-format", "json",
+                       "--no-session-persistence", task.prompt]
+            result = subprocess.run(command, cwd=repo, stdin=subprocess.DEVNULL, capture_output=True, text=True,
+                                    timeout=timeout)
+            (workspace / "stdout.json").write_text(result.stdout)
+            (workspace / "stderr.txt").write_text(result.stderr)
+            data = json.loads(result.stdout) if result.stdout.strip().startswith("{") else {}
+            final = data.get("result", "")
+            usage = data.get("usage", {})
+            if "hit your" in final and "limit" in final:
+                record.update(exit="rate-limited")
+                (workspace / "record.json").write_text(json.dumps(record, indent=2))
+                return record
+            record.update(exit=result.returncode, turns=data.get("num_turns"), cost_usd=data.get("total_cost_usd"),
+                          input_tokens=usage.get("input_tokens", 0) + usage.get("cache_creation_input_tokens", 0)
+                          + usage.get("cache_read_input_tokens", 0),
+                          output_tokens=usage.get("output_tokens"), is_error=data.get("is_error"))
+        else:
+            home = workspace / "codex-home"
+            home.mkdir(mode=0o700)
+            shutil.copy2(Path.home() / ".codex/auth.json", home / "auth.json")
+            os.chmod(home / "auth.json", 0o600)
+            (home / "AGENTS.md").write_text(text, encoding="utf-8")
+            (home / "config.toml").write_text(f'model = "{models["codex"]}"\nmodel_reasoning_effort = "{models["codex_effort"]}"\n')
+            copy_skills(skills, home / "skills")
+            command = ["codex", "exec", "--json", "-o", str(workspace / "final.txt"), "--sandbox", "workspace-write",
+                       "--skip-git-repo-check", task.prompt]
+            try:
+                # An open stdin makes codex exec wait for more input, so close it.
+                result = subprocess.run(command, cwd=repo, stdin=subprocess.DEVNULL, capture_output=True, text=True,
+                                        timeout=timeout, env={**os.environ, "CODEX_HOME": str(home)})
+            finally:
+                (home / "auth.json").unlink(missing_ok=True)
+            (workspace / "events.jsonl").write_text(result.stdout)
+            (workspace / "stderr.txt").write_text(result.stderr[-20000:])
+            final = (workspace / "final.txt").read_text() if (workspace / "final.txt").exists() else ""
+            usage = {"input_tokens": 0, "output_tokens": 0, "turns": 0}
+            for line in result.stdout.splitlines():
+                try:
+                    event = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if event.get("type") == "turn.completed":
+                    usage["turns"] += 1
+                    usage["input_tokens"] += event.get("usage", {}).get("input_tokens", 0)
+                    usage["output_tokens"] += event.get("usage", {}).get("output_tokens", 0) + event.get("usage", {}).get("reasoning_output_tokens", 0)
+            record.update(exit=result.returncode, turns=usage["turns"], input_tokens=usage["input_tokens"],
+                          output_tokens=usage["output_tokens"])
+        (workspace / "final.md").write_text(final)
+        record["checks"] = task.check(repo, final)
+        record["final_chars"] = len(final)
+    except subprocess.TimeoutExpired:
+        record.update(exit="timeout", checks=task.check(repo, ""))
+    except Exception as error:  # keep the batch running and record the failure
+        record.update(exit="harness-error", error=f"{type(error).__name__}: {error}")
+    finally:
+        record["seconds"] = round(time.time() - started, 1)
+        if task.flatpack:
+            record.setdefault("checks", {})
+            subprocess.run(["git", "-C", str(task_module.FLATPACK), "worktree", "remove", "--force", str(repo)],
+                           capture_output=True)
+    (workspace / "record.json").write_text(json.dumps(record, indent=2))
+    return record
+
+
+def recheck(run_dir: Path) -> int:
+    """Recompute deterministic checks from saved workspaces after a check is corrected; flatpack worktrees are gone,
+    so their repository checks keep the recorded values and only text checks are recomputed."""
+    records = [json.loads(line) for line in (run_dir / "results.jsonl").read_text().splitlines() if line.strip()]
+    for record in records:
+        task = next(t for t in task_module.TASKS if t.id == record["task"])
+        workspace = run_dir / f"{record['task']}__{record['host']}__{record['arm']}"
+        final = (workspace / "final.md").read_text() if (workspace / "final.md").exists() else ""
+        if (workspace / "repo").exists():
+            record["checks"] = task.check(workspace / "repo", final)
+        elif task.flatpack and task.id == "t10-flatpack-question":
+            record["checks"].update({k: v for k, v in task_module.check_flatpack_question(workspace, final).items() if k != "no_edits"})
+    (run_dir / "results.jsonl").write_text("".join(json.dumps(r) + "\n" for r in records))
+    print(f"rechecked {len(records)} runs in {run_dir}")
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--hosts", nargs="+", default=["claude", "codex"])
+    parser.add_argument("--arms", nargs="+", default=["baseline", "candidate"])
+    parser.add_argument("--tasks", nargs="*", help="task ids; default: all")
+    parser.add_argument("--baseline", type=Path, required=True, help="directory with <host>_global.md and skills/")
+    parser.add_argument("--out", type=Path, default=Path("/tmp/host-policy-eval") / dt.datetime.now().strftime("%Y%m%d-%H%M%S"))
+    parser.add_argument("--jobs", type=int, default=6)
+    parser.add_argument("--timeout", type=int, default=1800)
+    parser.add_argument("--claude-model", default="fable")
+    parser.add_argument("--claude-effort", default="high")
+    parser.add_argument("--codex-model", default="gpt-6.2-astra")
+    parser.add_argument("--codex-effort", default="high")
+    parser.add_argument("--recheck", type=Path, help="recompute checks for a finished run directory and exit")
+    args = parser.parse_args()
+    if args.recheck:
+        return recheck(args.recheck)
+    models = {"claude": args.claude_model, "claude_effort": args.claude_effort,
+              "codex": args.codex_model, "codex_effort": args.codex_effort}
+    selected = [task for task in task_module.TASKS if not args.tasks or task.id in args.tasks]
+    args.out.mkdir(parents=True, exist_ok=True)
+    jobs = [(task, host, arm) for task in selected for host in args.hosts for arm in args.arms]
+    print(f"{len(jobs)} runs -> {args.out}", flush=True)
+    with futures.ThreadPoolExecutor(max_workers=args.jobs) as pool, (args.out / "results.jsonl").open("a") as sink:
+        pending = {pool.submit(run_one, task, host, arm, args.out, args.baseline, models, args.timeout): (task.id, host, arm)
+                   for task, host, arm in jobs}
+        for done in futures.as_completed(pending):
+            record = done.result()
+            sink.write(json.dumps(record) + "\n")
+            sink.flush()
+            print(f"{record['task']:24} {record['host']:6} {record['arm']:9} exit={record.get('exit')} "
+                  f"{record.get('seconds')}s checks={record.get('checks')}", flush=True)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

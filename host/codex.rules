@@ -1,0 +1,17 @@
+# Managed by coresearch (host/codex.rules). The shared instructions ask for confirmation before these actions;
+# this file makes Codex enforce it.
+
+prefix_rule(
+    pattern = ["git", "push"],
+    decision = "prompt",
+    justification = "Pushing publishes work; confirm with the user first.",
+    match = ["git push", "git push origin main", "git push --force-with-lease"],
+    not_match = ["git pull", "git status"],
+)
+
+prefix_rule(
+    pattern = ["git", "clean"],
+    decision = "prompt",
+    justification = "git clean deletes untracked files in bulk; confirm with the user first.",
+    match = ["git clean -fdx", "git clean -n"],
+)

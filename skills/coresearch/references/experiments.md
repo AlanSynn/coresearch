@@ -3,7 +3,7 @@
 A useful design connects a consequential question, a specific contribution,
 credible alternatives, and evidence that could change the conclusion. Name what
 would falsify the proposed explanation or make the contribution unimportant.
-Astra owns that judgment; workers can gather baselines, implement bounded units,
+The lead owns that judgment; workers can gather baselines, implement bounded units,
 and run evaluations against an agreed interface.
 
 Evidence should fit the contribution, not a universal paper recipe:
@@ -29,13 +29,20 @@ reproduce any reported number. Planned results are not observed results.
 Validate the smallest meaningful path before expensive runs. Testing and repair
 follow the diagnosed risk, not a fixed retry count. Preserve negative results and
 failed-run diagnostics. A worker reports measurements and validation, while
-Astra decides whether they answer the question or expose missing evidence.
+the lead decides whether they answer the question or expose missing evidence.
 
 For an autonomous search loop, make the metric/validator executable and keep
 held-out evaluation separate from optimization. Set a real compute/time/iteration
 budget and a scientific stop condition. Changing the validator changes the
 comparison and belongs to the lead. Use the host's existing job lifecycle for
 long runs rather than adding polling or a Coresearch scheduler.
+
+For a long unattended run, plan it interactively first, then give it an
+executable completion condition (Claude Code `/goal` or a Stop hook, or a
+continuation loop capped at two or three restarts), keep the brief's status,
+result tables and failed approaches current, and commit after each meaningful
+unit of work. When several agents share a run, an elapsed-time budget helps them
+parallelize; keep a hard timeout of your own.
 
 Participant studies, restricted data, external publication, and expensive actions
 remain subject to the actual authorization and applicable project constraints.

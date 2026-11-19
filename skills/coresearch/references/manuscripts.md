@@ -8,7 +8,7 @@ adding a separate concept-decomposition workflow.
 Trace numbers, tables, comparisons, and figure captions to sources or run
 artifacts. Distinguish proposed diagrams from observed results; disclose illustrative
 or generated material where it could be mistaken for evidence. Figure/storyboard
-and slide work can be delegated, with Astra owning the scientific narrative and
+and slide work can be delegated, with the lead owning the scientific narrative and
 final interpretation. Use appropriate format tools rather than embedding office
 or rendering instructions in this skill.
 
@@ -28,5 +28,5 @@ been reviewed against evidence. Note unresolved limits, missing experiments, or
 unverified citations where they affect interpretation. For an artifact release,
 check that the reported results can be regenerated from the supplied instructions
 and that data, licenses, anonymity, and publication permissions match the project.
-Astra makes the final judgment; an independent worker audit is useful when it
+The lead makes the final judgment; an independent worker audit is useful when it
 adds a genuinely different check, not as a compulsory sign-off ritual.

@@ -1,9 +1,37 @@
 # Coresearch
 
-An Astra-led research harness: one skill, on-demand research resources, and two
-small utilities. Astra frames the problem, chooses the strategy, synthesizes
-worker results, and verifies the deliverable. Native agents handle bounded work
-when that helps. Coresearch does not run a second agent framework.
+A research harness and the single source of the user's standing agent instructions.
+The lead model (Astra in Codex; Fable or Opus in Claude Code) frames the problem,
+chooses the strategy, synthesizes worker results, and verifies the deliverable.
+Native agents and GLM handle bounded work when that helps. Coresearch does not run
+a second agent framework.
+
+It holds the shared working agreement for every agent host in [`host/`](host/core.md),
+four skills in [`skills/`](skills/), the [best practices](docs/agent-practices.md)
+behind them, and an [evaluation](evals/host-policy/README.md) that compares
+instruction changes on live agents before they are installed.
+
+## Install the shared instructions
+
+```bash
+python3 scripts/coresearch.py host check            # what differs from this checkout
+python3 scripts/coresearch.py host install --dry-run
+python3 scripts/coresearch.py host install          # add --replace once to adopt hand-written files
+```
+
+This writes one generated instruction file per host (`~/.claude/CLAUDE.md`,
+`~/.codex/AGENTS.md`, `~/.pi/agent/AGENTS.md`, `~/.config/opencode/AGENTS.md`),
+links every skill into `~/.claude/skills` (which opencode also reads),
+`~/.codex/skills` and `~/.pi/agent/skills`, links `glm-delegate` into
+`~/.local/bin`, links the Codex rules in `host/codex.rules` into `~/.codex/rules`,
+and adds the permission rules in `host/claude.permissions.json` to
+`~/.claude/settings.json` without touching its other settings. Edit
+`host/core.md` or `host/<host>.md`, never the generated files: each generated
+file records a digest of its text, and one edited by hand is preserved like a
+file the command did not create. Such files are replaced only with `--replace`,
+which first moves them to `~/.local/state/coresearch/backups/<UTC time>/`,
+under their path relative to the home directory. `host render` prints the
+generated text.
 
 ## Start
 
@@ -30,19 +58,19 @@ Reload the host's skill discovery as needed and request, for example:
 > Use Coresearch to assess this research idea, implement the most informative
 > feasible experiment, and review what the results actually support.
 
-Select Astra as the lead in a host that supports it. Installation does not select
-models, provision workers, or grant tool permissions. A Claude-only session can
-use the research resources but is not, by itself, an Astra-led session.
+Installation does not select models, provision workers, or grant tool
+permissions; choose the strongest available model as the lead.
 The native Codex plugin manifest is also retained; choose plugin distribution or
 manual installation, not duplicate installations of the same skill.
 
-Neither installation nor research work requires changing global or project
-`AGENTS.md` / `CLAUDE.md`. No OMX installation is needed.
+Skill installation and research work do not change project `AGENTS.md` /
+`CLAUDE.md`; only the explicit `host` command manages the global files. No OMX
+installation is needed.
 
 ## What the skill adds
 
 Only its name and short description need discovery. The loaded
-[skill](skills/coresearch/SKILL.md) establishes lead ownership and exposes five
+[skill](skills/coresearch/SKILL.md) establishes lead ownership and exposes six
 independent resources, not a pipeline:
 
 | Resource | Research capability |
@@ -52,8 +80,9 @@ independent resources, not a pipeline:
 | [Analysis](skills/coresearch/references/analysis.md) | Gaps, contradictory findings, causal explanations, qualitative analysis, evidence-chain audits |
 | [Manuscripts](skills/coresearch/references/manuscripts.md) | Writing, figures/slides, venue critique, rebuttal, verification, release |
 | [Delegation](skills/coresearch/references/delegation.md) | Bounded assignments and compact handoffs for native workers, including Claude Code Sonnet/Opus |
+| [Claim review](skills/coresearch/references/review.md) | Independent, cross-family review of a result before it supports a claim |
 
-Astra owns consequential decisions and final interpretation. Workers own a clear
+The lead owns consequential decisions and final interpretation. Workers own a clear
 scope, relevant inputs, an expected artifact, and completion criteria. The host
 supplies execution, permissions, and completion events. No model registry,
 polling service, mandatory reviewer chain, or transcript ingestion is added.

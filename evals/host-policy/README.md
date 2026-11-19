@@ -1,0 +1,36 @@
+# Host-policy evaluation
+
+Compares two instruction arms on live agents before a change to `host/` is installed:
+
+- **baseline**: the hosts' previous global instructions and skills, from a snapshot directory given with `--baseline`
+  (`claude_global.md`, `codex_global.md`, `skills/`). The snapshot holds personal files and stays out of the
+  repository.
+- **candidate**: `host/core.md` plus the host addition, rendered by `scripts/coresearch.py`, with every skill in
+  `skills/`.
+
+The arms differ only in global instructions and skills. Each run gets its own workspace with a fresh fixture
+repository from [`tasks.py`](tasks.py). Claude Code runs with `--setting-sources project,local`, so the user's own
+`CLAUDE.md`, settings and skills stay out; the arm's instructions sit in a `CLAUDE.md` above the repository and its
+skills in the repository's `.claude/skills`. Codex runs with a temporary `CODEX_HOME` holding the arm's `AGENTS.md`, a
+minimal `config.toml` and the arm's skills; a copy of the user's `auth.json` is placed there with mode 600 for the run
+and deleted right after it. The flatpack tasks run in a detached worktree of the flatpack checkout, removed afterwards.
+
+```bash
+python3 -B evals/host-policy/run.py --baseline <snapshot dir> --out /tmp/host-policy-eval/<name>
+python3 -B evals/host-policy/judge.py /tmp/host-policy-eval/<name>
+python3 -B evals/host-policy/summarize.py /tmp/host-policy-eval/<name> [more run dirs]
+```
+
+`run.py` records deterministic checks, tokens, turns and time per run. `judge.py` scores each run's task-specific rubric
+and its report with a judge from the other model family (Codex judges Claude Code runs, Claude Code judges Codex runs),
+blind to the arm: workspace paths, which name the arm, are masked in the answer it sees. It does not see the fixture's
+own instructions, so a rubric must state any project rule the answer is graded against. Runs use live accounts and
+count against their usage. A run or judgment that hits a usage limit is
+marked and left out of the summary; `judge.py --missing` judges only the runs that still lack a score, and
+`run.py --recheck <run dir>` recomputes the deterministic checks after a check is corrected.
+
+The tasks target behaviors that standing instructions can change: answering a question without editing, finishing a
+fix, stating assumptions on an ambiguous feature, preserving user work during cleanup, claim discipline on confounded
+results, grounding in sources, triaging a 2.3 MB log, finishing a multi-part implementation, leaving a pinned file
+alone, and two questions on the real flatpack repository. They are a small development set, not a benchmark: a
+difference on one task in one run is anecdotal.

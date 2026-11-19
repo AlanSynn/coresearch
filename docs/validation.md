@@ -139,3 +139,48 @@ on the flatpack tasks, which flatpack's `AGENTS.md` asks for, under both arms. T
 since the revision 3 repeat runs. Seconds include service latency and are not compared.
 
 Revision 3 is the installed version.
+
+## Engineering skill revision (2026-11-19)
+
+Version 3 moved the former Claude Code engineering policy into the `engineering` skill with its text unchanged. That
+text was written for earlier models and conflicted with the shared instructions in places: it asked for "the minimal
+correction" where `host/core.md` asks for the strongest result, it allowed commits only on request where a repository
+may allow them, it prescribed a fixed inspect-plan-implement loop and a reading list before every edit, and it carried
+Claude Code tool rules (deferred tool loading, MCP checks) into a skill that Codex also reads. The revision keeps the
+engineering stances (simplicity, SOLID as criteria, domain-driven design only where the domain needs it, compatibility
+and migrations, risk-based testing, security, persistent state, independent review), states them as criteria rather
+than a procedure, defers scope, approvals, evidence and reports to the working agreement, removes the process
+reference and the host-specific rules, and shrinks the skill from 22.5 KB to 12.8 KB.
+
+[`evals/host-policy`](../evals/host-policy/README.md) compared the two versions on three tasks the skill is for (t12
+schema upgrade, t13 consolidation of drifted pricing rules, t14 parser fix with tests), three repetitions per task, arm
+and host. Both arms used the installed revision 3 instructions and the same other skills; only the `engineering` skill
+differed. Claude Code ran Fable 5.2 at `high` and Codex GPT-6.2 Astra at `high`; the judges saw the code change as well
+as the answer. The records are in the maintainer's `.sources/evals/engineering-2026-11-19/`. All figures are measured.
+
+| Host | Skill | Runs | Checks passed | Task score | Report score | Input tokens, median | Claude cost |
+|---|---|---|---|---|---|---|---|
+| Claude Code, Fable 5.2 | previous | 9 | 30/30 | 4.44 | 4.22 | 155,870 | $9.24 |
+| Claude Code, Fable 5.2 | revised | 9 | 30/30 | 4.56 | 4.11 | 160,074 | $10.29 |
+| Codex, Astra | previous | 9 | 30/30 | 3.67 | 3.67 | 140,659 | n/a |
+| Codex, Astra | revised | 9 | 30/30 | 3.67 | 3.67 | 162,276 | n/a |
+
+- **Quality was level.** Every deterministic check passed under both versions, and the judges' scores for the same
+  task and repetition differ by at most one point, in both directions. On the parser task, Claude Code rejected
+  malformed input such as `abc5m` in two of three runs with the revised skill and in none with the previous one, but
+  one of those two runs never opened the skill, so this is not evidence of an effect; Codex rejected it in none.
+- **The revised skill cost somewhat more.** Within each task and repetition, the revised skill used more input tokens
+  in 7 of 9 Codex pairs (median ratio 1.16) and 6 of 9 Claude Code pairs (median ratio 1.26). Codex ran 105 commands
+  against 97, spread over reads, git, tests and probes; on the parser task it ran the empty suite before the change
+  and confirmed that its new tests failed on the old code before fixing it, which `testing.md`'s "run the relevant
+  checks before the change" asks for.
+- **Both versions were loaded.** Codex opened the skill in every run, and the revised skill's specific references more
+  often (`design.md` on the pricing task in all three runs, against none). Claude Code did not load the skill in three
+  parser-task runs (one previous, two revised), which therefore compare nothing but noise.
+
+**Limits.** Three development tasks, written by the author of the revision, on which both versions pass every check:
+the comparison shows no loss on these tasks, not a gain. The conflicts the revision removes (commit permission, minimal
+fixes, host-specific tool rules) are not exercised by any task. The judges graded tasks t12 to t14 with the code change
+in view, which earlier tasks did not have.
+
+The revised skill is the installed version.

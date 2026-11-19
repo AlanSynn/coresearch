@@ -1,46 +1,60 @@
-# Design: simplicity, SOLID, DDD and architecture
+# Design
 
-## 5. Simplicity, scope, and code quality
-- Implement only what the request requires. Avoid speculative features, one-use abstractions, generic frameworks, and configuration without a concrete need.
-- Follow established conventions. Prefer meaningful names, cohesive modules, explicit dependencies, and readable control flow. Explain non-obvious reasons and constraints in comments, not what the code already says.
-- Prefer composition where it reduces coupling. Separate pure computation from I/O and side effects; use types and contracts where they improve correctness without manufacturing object hierarchies.
-- Apply DRY to duplicated knowledge, not coincidentally similar syntax or concepts from different domains. Balance reuse with KISS and YAGNI.
-- Keep unrelated cleanup, renaming, and bulk formatting out of the change. Remove dead code created by your edits; report unrelated debt instead of expanding scope.
+Give the problem the design it warrants: simple where the domain is simple, explicit boundaries where change,
+ownership or consistency demand them.
 
-## 6. Apply SOLID as design criteria
-- **SRP:** Group code by coherent responsibility and reason to change. Do not split classes or functions mechanically to satisfy a size threshold.
-- **OCP:** Isolate demonstrated variation behind stable extension points. Do not forbid ordinary edits or invent abstractions for hypothetical extensions.
-- **LSP:** Substitutable implementations must preserve caller-visible preconditions, outcomes, errors, and side-effect contracts. Use shared contract tests where substitution matters.
-- **ISP:** Provide focused contracts tailored to consumers. Do not make a caller depend on unrelated capabilities or a universal interface.
-- **DIP:** Keep core policy independent of infrastructure details. Introduce ports at meaningful volatility or testing boundaries and compose implementations externally; not every class needs an interface.
-- Use the language's natural functions, modules, protocols, or types. SOLID guides change impact and dependency direction; it does not require object-oriented ceremony.
+## Simplicity and code quality
 
-## 7. DDD: domain meaning and strategic boundaries
-- Establish the user goal, domain rules, and important examples. Use a consistent Ubiquitous Language in discussions, code, and tests; clarify genuinely ambiguous business terms.
-- For complex domains, distinguish core, supporting, and generic subdomains. Make Bounded Context responsibilities, model boundaries, data ownership, and public contracts explicit.
-- Maintain a Context Map when integrations matter. Preserve context-specific meanings and use an Anti-Corruption Layer where external models would distort the local domain.
-- Do not equate Domain-Driven Design with microservices, CQRS, or event sourcing. For a new system, consider a modular monolith unless actual constraints justify another deployment structure.
-- Keep simple CRUD, scripts, and prototypes simple. Introduce rich models and tactical patterns only when business complexity or consistency requirements justify them.
+- Build what the problem needs now. A speculative feature, a one-use abstraction, a generic framework or configuration
+  without a concrete need costs more to read than it saves, and so does indirection that adds no branch or boundary.
+- Follow the repository's conventions. Readable code has meaningful names, cohesive modules, explicit dependencies and
+  plain control flow; fewer lines, short names and dense one-liners are not simplicity. Comments give non-obvious
+  reasons and constraints, not what the code already says.
+- Reuse existing logic where it stays correct. Before you consolidate or remove code, keep the behavior its callers
+  rely on unless the task is to change it.
+- Apply DRY to duplicated knowledge, not to code that looks alike but changes for different reasons.
+- Separate pure computation from I/O and side effects, and use types and contracts where they make correctness easier
+  to see.
+- Remove dead code your change creates. Whether to also fix nearby debt depends on who owns the design, which the
+  working agreement and the repository's instructions settle; otherwise report it.
 
-## 8. DDD: invariants and state transitions
-- Distinguish Entity identity from Value Object equality. Validate meaningful Value Objects at construction and keep them immutable when appropriate.
-- Define Aggregates around invariants and consistency boundaries. Expose intent through the Aggregate Root; do not let callers bypass domain behavior and mutate internal state arbitrarily.
-- Put business rules in the domain and use-case coordination, authorization enforcement, and transaction orchestration in the application layer. Use Domain Services for genuine domain behavior that does not belong to one object.
-- Enforce strongly consistent rules within an atomic boundary or explicitly design coordination. Across boundaries, specify acceptable delay, duplicate handling, ordering, and compensation rather than merely saying "eventual consistency."
-- Use Repositories for meaningful Aggregate access, not mechanically for every table. Do not force read-only queries through unnecessary Aggregate reconstruction.
-- Distinguish internal domain events from published integration events. When events are warranted, define publication timing, delivery failure handling, idempotency, and schema evolution.
+## SOLID as criteria
 
-## 9. Architecture and dependency boundaries
-- Understand the existing architecture before changing it. In new domain boundaries, keep business policy independent of UI, transport, persistence, and framework implementation details.
-- Cross boundaries through explicit contracts. Avoid leaking ORM entities or external SDK types into core domain interfaces without a justified tradeoff.
-- Do not bypass another Context's ownership through internal imports or direct writes to its data. Use its supported API, events, or explicitly approved integration contract.
-- Distinguish logical boundaries from deployment units. Add services, layers, and shared kernels only for demonstrated operational, security, performance, or ownership needs.
+Use SOLID to judge change impact and dependency direction, not as ceremony: group code by its reason to change, isolate
+variation you have actually seen, keep substitutable implementations true to their callers' contracts (preconditions,
+outcomes, errors and side effects), give consumers focused interfaces, and keep core policy independent of
+infrastructure. Use the language's natural functions, modules, protocols or types; not every class needs an interface.
 
-## 10. Maintain the design continuously
-- For meaningful behavior changes, assess effects on terminology, Contexts, invariants, contracts, dependencies, quality attributes, and migration or recovery. No design impact means no extra document is required.
-- Record consequential decisions using the existing ADR format. Otherwise, capture context, alternatives, decision, rationale, consequences, risks, verification, and revisit triggers concisely.
-- Distinguish proposed, accepted, and superseded decisions. Do not claim approval that was not given; preserve decision history when replacing an earlier choice.
-- Update affected glossaries, Context Maps, diagrams, and contract documentation in the same change set. Distinguish current architecture from intended architecture; do not duplicate obvious code facts.
-- Make important constraints executable where practical: forbidden dependencies, cycles, ownership boundaries, contract compatibility, and domain invariants. Confirm that new checks actually select and exercise their intended targets.
-- Baseline existing violations without adding new ones. Document exceptions with a reason, known owner, and removal or review condition; do not invent owners or deadlines.
-- Revisit affected decisions when requirements, scale, incidents, trust boundaries, or major dependencies change. Do not use documentation maintenance as a pretext for an unrelated redesign.
+## Domain-driven design, when the domain is complex
+
+- Keep CRUD, scripts, prototypes and research code simple. Introduce domain models and tactical patterns when business
+  rules or consistency requirements justify them.
+- Domain-driven design does not mean microservices, CQRS or event sourcing. A new system starts as a modular monolith
+  unless actual constraints justify another deployment structure.
+- In a complex domain, use one vocabulary in discussion, code and tests; make each Bounded Context's responsibilities,
+  data ownership and public contracts explicit; and put an anti-corruption layer where an external model would distort
+  the local one.
+- Draw Aggregates around invariants and consistency boundaries, and let callers change state only through the
+  Aggregate's behavior. Business rules belong in the domain; coordination, authorization and transactions in the
+  application layer. Repositories serve Aggregate access, not every table or read-only query.
+- Across boundaries, say what "eventually consistent" means: acceptable delay, duplicates, ordering and compensation.
+  Keep internal domain events distinct from published integration events.
+
+## Boundaries
+
+- Understand the existing architecture before you change it. Before changing architecture, public contracts,
+  authorization or persistence, weigh the alternatives, compatibility, migration and recovery.
+- Cross boundaries through explicit contracts, not through another context's internals or data. Keep ORM entities and
+  external SDK types out of core interfaces unless you state the trade-off.
+- Add services, layers and shared kernels for a demonstrated operational, security, performance or ownership need.
+
+## Design records
+
+- Record a consequential decision with its context, alternatives, decision, rationale, consequences and the trigger to
+  revisit it, in the repository's ADR format when it has one. A change with no design impact needs no document.
+- Mark decisions as proposed, accepted or superseded, and claim approval only where it was given. Update the affected
+  glossaries, context maps and contract documents in the same change, and keep current and intended architecture
+  apart.
+- Make important constraints executable where practical (forbidden dependencies, cycles, contract compatibility,
+  invariants), and confirm that a new check exercises its target. Baseline existing violations instead of adding new
+  ones, and record an exception with its reason and the condition for revisiting it.

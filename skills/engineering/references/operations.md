@@ -1,14 +1,18 @@
 # Reliability, performance and delivery
 
-## 13. Reliability, performance, and user experience
-- Give external calls and long-running work appropriate deadlines, cancellation, and resource limits. Retry only transient failures with safe replay, bounded attempts, backoff, and jitter.
-- Do not disguise failures as empty data or successful responses. Propagate actionable context without exposing secrets or unnecessary personal information.
-- Optimize from representative measurements. Compare the relevant latency, throughput, memory, queries, or cost; design cache freshness, invalidation, and consistency explicitly.
-- Include necessary logs, metrics, traces, health checks, alerts, and recovery procedures for operational changes. Derive SLOs and limits from real requirements rather than invented targets.
-- For UI changes, inspect the running interface and exercise the affected interactions. Check relevant keyboard access, accessibility, responsive behavior, loading, empty, error, and retry states.
-
-## 18. Delivery and operational readiness
-- Review the final diff for scope creep, debug leftovers, secrets, unnecessary dependencies, and generated files. Maintain generated artifacts through their source and documented regeneration path.
-- Before adding or upgrading dependencies, check necessity, alternatives, compatibility, security, licensing, and lockfile impact. Novelty and recency alone are not reasons to adopt a tool.
-- Split large changes into units that can be validated and deployed safely. Give temporary feature flags removal conditions; keep deployment and rollback within approved procedures.
-- Commit, push, or create a pull request only when requested or explicitly authorized. Include only your intended changes, not unrelated user or agent work.
+- Give external calls and long-running work deadlines, cancellation and resource limits. Retry only transient failures
+  that are safe to replay, with bounded attempts, backoff and jitter. Before a retry, check for partial execution and
+  external side effects: a timeout or an exception does not mean the work rolled back.
+- Let failures surface. An empty result or a success response must not hide one; carry actionable context without
+  exposing secrets or personal information.
+- Optimize from representative measurements of latency, throughput, memory, queries or cost, and design cache
+  freshness and invalidation explicitly.
+- An operational change comes with the logs, metrics, health checks, alerts and recovery steps it needs; derive limits
+  and service levels from real requirements.
+- For a change to a user interface, run it and use the affected interactions, including keyboard access, responsive
+  layout and the loading, empty, error and retry states.
+- Before adding or upgrading a dependency, weigh necessity, alternatives, compatibility, security, license and lockfile
+  impact; recency alone is not a reason.
+- Review the final diff for debug leftovers, secrets, unneeded dependencies and generated files, and regenerate
+  generated artifacts from their source. Split a large change into units that can be validated and released safely,
+  and give a temporary feature flag its removal condition.

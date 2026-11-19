@@ -16,7 +16,8 @@ generated instruction file per host, links every skill in `skills/` into each ho
 `glm-delegate` onto the PATH, and installs the rules that enforce the confirmation boundary (Codex rules, Claude Code
 permission rules) and Claude Code's default effort for Fable 5.2, `high`, which its guide recommends for research and
 long agentic work and which Claude Code would otherwise leave at `medium`. Procedures moved out of the always-loaded files into skills: `engineering` (the former
-Claude Code policy, split by topic with its text unchanged), `glm-delegate` and `disk-archive`.
+Claude Code policy, split by topic and then restated as criteria for current models; see
+[validation](validation.md#engineering-skill-revision-2026-11-19)), `glm-delegate` and `disk-archive`.
 
 This replaces version 2's boundary that Coresearch never edits host configuration or global prompts, **for the `host`
 command only**. `install` and `init` keep that boundary.

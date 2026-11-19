@@ -6,6 +6,9 @@ Arms differ only in the global instructions and the skills they ship. Claude Cod
 instructions sit in a CLAUDE.md above the task repository and its skills in the repository's `.claude/skills`.
 Codex runs with a temporary CODEX_HOME holding the arm's AGENTS.md, a minimal config and the arm's skills; a copy of
 the user's auth.json is placed there for the run and deleted right after it.
+
+Every model is named on the command line. Fable and Astra run only within a grant the user made (grants.py), and a
+hook in every run stops a subagent from switching to a top-tier family the run has no grant for.
 """
 from __future__ import annotations
 
@@ -25,6 +28,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 sys.path.insert(0, str(HERE))
+import grants  # noqa: E402
 import tasks as task_module  # noqa: E402
 
 spec = importlib.util.spec_from_file_location("coresearch_cli", ROOT / "scripts/coresearch.py")
@@ -142,6 +146,8 @@ def run_one(task, host: str, arm: str, out: Path, baseline: Path, models: dict, 
                 with exclude.open("a") as stream:
                     stream.write("\n.claude/skills/\n")
             settings = json.loads(CLAUDE_SETTINGS)
+            settings["hooks"] = {"PreToolUse": [{"matcher": "Agent|Task", "hooks": [
+                {"type": "command", "command": grants.guard_command(models["blocked"]["claude"], workspace)}]}]}
             if task.cluster:
                 settings["permissions"] = {"deny": CLUSTER_DENY}
             command = ["claude", "-p", "--model", models["claude"], "--effort", models["claude_effort"],
@@ -149,7 +155,7 @@ def run_one(task, host: str, arm: str, out: Path, baseline: Path, models: dict, 
                        "--permission-mode", "bypassPermissions", "--output-format", "stream-json", "--verbose",
                        "--no-session-persistence", task.prompt]
             result = subprocess.run(command, cwd=repo, stdin=subprocess.DEVNULL, capture_output=True, text=True,
-                                    timeout=timeout, env={**os.environ, **cluster_env})
+                                    timeout=timeout, env={**grants.model_free_env(), **cluster_env})
             (workspace / "transcript.jsonl").write_text(result.stdout)
             (workspace / "stderr.txt").write_text(result.stderr)
             data = {}
@@ -183,12 +189,14 @@ def run_one(task, host: str, arm: str, out: Path, baseline: Path, models: dict, 
             (home / "config.toml").write_text(f'model = "{models["codex"]}"\nmodel_reasoning_effort = "{models["codex_effort"]}"\n'
                                               + "".join(line + "\n" for line in extra if line))
             copy_skills(skills, home / "skills")
-            command = ["codex", "exec", "--json", "-o", str(workspace / "final.txt"), "--sandbox", "workspace-write",
-                       "--skip-git-repo-check", task.prompt]
+            grants.write_codex_hooks(home, models["blocked"]["codex"], workspace)
+            # The only hooks in this temporary home are the evaluation's own, so they run without a trust review.
+            command = ["codex", "exec", "--dangerously-bypass-hook-trust", "--json", "-o", str(workspace / "final.txt"),
+                       "--sandbox", "workspace-write", "--skip-git-repo-check", task.prompt]
             try:
                 # An open stdin makes codex exec wait for more input, so close it.
                 result = subprocess.run(command, cwd=repo, stdin=subprocess.DEVNULL, capture_output=True, text=True,
-                                        timeout=timeout, env={**os.environ, **cluster_env, "CODEX_HOME": str(home)})
+                                        timeout=timeout, env={**grants.model_free_env(), **cluster_env, "CODEX_HOME": str(home)})
             finally:
                 (home / "auth.json").unlink(missing_ok=True)
             (workspace / "events.jsonl").write_text(result.stdout)
@@ -216,6 +224,7 @@ def run_one(task, host: str, arm: str, out: Path, baseline: Path, models: dict, 
         record.update(exit="harness-error", error=f"{type(error).__name__}: {error}")
     finally:
         record["seconds"] = round(time.time() - started, 1)
+        record["subagent_models"] = grants.guard_log(workspace)
         if task.flatpack:
             record.setdefault("checks", {})
             subprocess.run(["git", "-C", str(task_module.FLATPACK), "worktree", "remove", "--force", str(repo)],
@@ -246,16 +255,16 @@ def recheck(run_dir: Path) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--hosts", nargs="+", default=["claude", "codex"])
+    parser.add_argument("--hosts", nargs="+", default=["claude", "codex"], choices=["claude", "codex"])
     parser.add_argument("--arms", nargs="+", default=["baseline", "candidate"])
     parser.add_argument("--tasks", nargs="*", help="task ids; default: all")
-    parser.add_argument("--baseline", type=Path, required=True, help="directory with <host>_global.md and skills/")
+    parser.add_argument("--baseline", type=Path, help="directory with <host>_global.md and skills/ (required for runs)")
     parser.add_argument("--out", type=Path, default=Path("/tmp/host-policy-eval") / dt.datetime.now().strftime("%Y%m%d-%H%M%S"))
     parser.add_argument("--jobs", type=int, default=6)
     parser.add_argument("--timeout", type=int, default=1800)
-    parser.add_argument("--claude-model", default="fable")
+    parser.add_argument("--claude-model", help="required with the claude host; Fable needs the user's grant (grants.py)")
     parser.add_argument("--claude-effort", default="high")
-    parser.add_argument("--codex-model", default="gpt-6.2-astra")
+    parser.add_argument("--codex-model", help="required with the codex host; Astra needs the user's grant (grants.py)")
     parser.add_argument("--codex-effort", default="high")
     parser.add_argument("--codex-config", default="",
                         help="TOML lines added to both arms' Codex config, such as the sandbox settings glm-delegate needs")
@@ -272,12 +281,35 @@ def main() -> int:
         CANDIDATE_SKILLS[name] = Path(directory).resolve()
     if args.recheck:
         return recheck(args.recheck)
+    if args.baseline is None:
+        parser.error("--baseline is required for runs")
+    chosen = {host: getattr(args, f"{host}_model") for host in args.hosts}
+    for host, model in chosen.items():
+        if not model:
+            parser.error(f"--{host}-model is required: name the model for every host that runs")
+    for lines in (args.codex_config, args.candidate_codex_config):
+        if grants.CODEX_MODEL_SETTING.search(lines):
+            parser.error("choose the Codex model and effort with --codex-model and --codex-effort, not through config lines")
+    try:
+        families = {host: grants.family(model) for host, model in chosen.items()}
+    except ValueError as error:
+        parser.error(str(error))
+    selected = [task for task in task_module.TASKS if not args.tasks or task.id in args.tasks]
+    jobs = [(task, host, arm) for task in selected for host in args.hosts for arm in args.arms]
+    counts: dict[str, int] = {}
+    for _, host, _ in jobs:
+        if families[host]:
+            counts[families[host]] = counts.get(families[host], 0) + 1
+    try:
+        grants.reserve(counts, f"run.py ({len(jobs)} runs)")
+    except PermissionError as error:
+        print(error, file=sys.stderr)
+        return 2
     models = {"claude": args.claude_model, "claude_effort": args.claude_effort,
               "codex": args.codex_model, "codex_effort": args.codex_effort,
-              "codex_config": args.codex_config, "candidate_codex_config": args.candidate_codex_config}
-    selected = [task for task in task_module.TASKS if not args.tasks or task.id in args.tasks]
+              "codex_config": args.codex_config, "candidate_codex_config": args.candidate_codex_config,
+              "blocked": {host: [name for name in grants.FAMILIES if name != families.get(host)] for host in ("claude", "codex")}}
     args.out.mkdir(parents=True, exist_ok=True)
-    jobs = [(task, host, arm) for task in selected for host in args.hosts for arm in args.arms]
     print(f"{len(jobs)} runs -> {args.out}", flush=True)
     with futures.ThreadPoolExecutor(max_workers=args.jobs) as pool, (args.out / "results.jsonl").open("a") as sink:
         pending = {pool.submit(run_one, task, host, arm, args.out, args.baseline, models, args.timeout): (task.id, host, arm)

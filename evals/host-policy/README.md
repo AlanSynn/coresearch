@@ -17,10 +17,31 @@ minimal `config.toml` and the arm's skills; a copy of the user's `auth.json` is 
 and deleted right after it. The flatpack tasks run in a detached worktree of the flatpack checkout, removed afterwards.
 
 ```bash
-python3 -B evals/host-policy/run.py --baseline <snapshot dir> --out /tmp/host-policy-eval/<name>
-python3 -B evals/host-policy/judge.py /tmp/host-policy-eval/<name>
+python3 -B evals/host-policy/run.py --baseline <snapshot dir> --out /tmp/host-policy-eval/<name> \
+  --claude-model <model> --codex-model <model> [--claude-effort high --codex-effort high]
+python3 -B evals/host-policy/judge.py /tmp/host-policy-eval/<name> --codex-judge <model> --claude-judge <model>
 python3 -B evals/host-policy/summarize.py /tmp/host-policy-eval/<name> [more run dirs]
 ```
+
+Nothing has a default model: `run.py` refuses without a model for every host it runs and `judge.py` without a judge
+model for every host it judges, and both refuse a name such as `default` or `best` that could resolve to a top-tier
+model. Fable and Astra, any model whose name contains `fable` or `astra`, are expensive and their usage limits are
+tight, so they run only within a grant the user made. The user grants in their own terminal:
+
+```bash
+python3 evals/host-policy/grants.py grant fable --runs 40 [--hours 12]   # asks the user to type the family
+python3 evals/host-policy/grants.py list
+python3 evals/host-policy/grants.py revoke fable
+```
+
+The grant is kept in `~/.config/coresearch/eval-grants.json`, outside the repository. `run.py` and `judge.py` take
+the runs and judgments they need from it before anything starts and refuse otherwise, naming the command for the
+user. The grant command reads its confirmation from the controlling terminal, which an agent's shell does not have.
+An agent asks the user for a grant and never creates, edits or works around one. Inside a run, a hook in Claude Code
+and in Codex (whose hooks run without a trust review, since the run's temporary home holds only this hook) denies a
+subagent that asks for a top-tier family the run has no grant for; the run records every subagent model request in
+`subagent_models`. The harness also drops `ANTHROPIC_*MODEL*` and `CLAUDE_CODE_*MODEL*` variables from the agents'
+environment and refuses Codex config lines that would choose the model or effort.
 
 `run.py` records deterministic checks, tokens, turns and time per run, and from the agent's tool calls (Claude Code's
 transcript, Codex's command events) the skill files it opened, its `glm-delegate` calls and any task-specific trace

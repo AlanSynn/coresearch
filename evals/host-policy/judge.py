@@ -2,7 +2,7 @@
 """Score finished runs with a rubric judge from the other model family, blind to the instruction arm.
 
 Claude runs are judged by Codex and Codex runs by Claude Code, each in a clean environment without the user's
-instructions. The judge sees the task prompt, the rubric, the final answer, the deterministic check results and the
+instructions. Both judge models are named on the command line; Fable and Astra need the user's grant (grants.py). The judge sees the task prompt, the rubric, the final answer, the deterministic check results and the
 repository change summary; it never sees which arm produced the run.
 """
 from __future__ import annotations
@@ -20,6 +20,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+import grants  # noqa: E402
 import tasks as task_module  # noqa: E402
 
 ARM_PATH = re.compile(r"[^\s(\[`'\"<>]*__(?:baseline|candidate)")
@@ -77,23 +78,28 @@ def code_change(repo: Path, limit: int = 20000) -> str:
     return text if len(text) <= limit else text[:limit] + f"\n[cut: {len(text) - limit} more characters]"
 
 
-def judge_with_claude(prompt: str) -> str:
+def judge_with_claude(prompt: str, model: str, effort: str) -> str:
     with tempfile.TemporaryDirectory() as empty:
-        result = subprocess.run(["claude", "-p", "--model", "opus", "--effort", "medium", "--setting-sources", "project,local",
+        # No tools, so the judge cannot start a subagent on another model.
+        result = subprocess.run(["claude", "-p", "--model", model, "--effort", effort, "--setting-sources", "project,local",
                                  "--output-format", "json", "--no-session-persistence", "--tools", "", "--", prompt],
-                                cwd=empty, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=600)
+                                cwd=empty, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=600,
+                                env=grants.model_free_env())
     return json.loads(result.stdout).get("result", "") if result.stdout.strip().startswith("{") else result.stdout
 
 
-def judge_with_codex(prompt: str) -> str:
+def judge_with_codex(prompt: str, model: str, effort: str) -> str:
     with tempfile.TemporaryDirectory() as home, tempfile.TemporaryDirectory() as empty:
         os.chmod(home, 0o700)
         shutil.copy2(Path.home() / ".codex/auth.json", Path(home) / "auth.json")
-        Path(home, "config.toml").write_text('model = "gpt-6.2-astra"\nmodel_reasoning_effort = "medium"\n')
+        Path(home, "config.toml").write_text(f'model = "{model}"\nmodel_reasoning_effort = "{effort}"\n')
+        blocked = [name for name in grants.FAMILIES if name != grants.family(model)]
+        grants.write_codex_hooks(Path(home), blocked, Path(home))
         out = Path(empty) / "final.txt"
         try:
             # An open stdin makes codex exec wait for more input, so close it.
-            subprocess.run(["codex", "exec", "--sandbox", "read-only", "--skip-git-repo-check", "-o", str(out), prompt],
+            subprocess.run(["codex", "exec", "--dangerously-bypass-hook-trust", "--sandbox", "read-only",
+                            "--skip-git-repo-check", "-o", str(out), prompt],
                            cwd=empty, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=600,
                            env={**os.environ, "CODEX_HOME": home})
         finally:
@@ -101,7 +107,7 @@ def judge_with_codex(prompt: str) -> str:
         return out.read_text() if out.exists() else ""
 
 
-def judge(run_dir: Path, record: dict) -> dict:
+def judge(run_dir: Path, record: dict, judges: dict) -> dict:
     task = next(t for t in task_module.TASKS if t.id == record["task"])
     workspace = run_dir / f"{record['task']}__{record['host']}__{record['arm']}"
     answer = (workspace / "final.md").read_text() if (workspace / "final.md").exists() else ""
@@ -116,7 +122,10 @@ def judge(run_dir: Path, record: dict) -> dict:
                            rubric=task.rubric or "The task was carried out correctly and completely, within the scope the request implies.",
                            report=REPORT_RUBRIC)
     try:
-        raw = judge_with_codex(prompt) if record["host"] == "claude" else judge_with_claude(prompt)
+        if record["host"] == "claude":
+            raw = judge_with_codex(prompt, judges["codex"], judges["codex_effort"])
+        else:
+            raw = judge_with_claude(prompt, judges["claude"], judges["claude_effort"])
     except subprocess.TimeoutExpired:
         raw = "judge timed out"  # left unscored, so judge.py --missing retries it
     match = re.search(r"\{.*\}", raw, re.S)
@@ -125,7 +134,8 @@ def judge(run_dir: Path, record: dict) -> dict:
     except json.JSONDecodeError:
         scores = {}
     return {"task": record["task"], "host": record["host"], "arm": record["arm"],
-            "judge": "codex" if record["host"] == "claude" else "claude", **scores, "raw": raw[-600:]}
+            "judge": "codex" if record["host"] == "claude" else "claude",
+            "judge_model": judges["codex"] if record["host"] == "claude" else judges["claude"], **scores, "raw": raw[-600:]}
 
 
 def main() -> int:
@@ -135,6 +145,10 @@ def main() -> int:
     parser.add_argument("--tasks", nargs="*", help="judge only these task ids (routing tests need no judge)")
     parser.add_argument("--missing", action="store_true",
                         help="keep existing scored judgments and judge only runs without one (after a judge failure)")
+    parser.add_argument("--codex-judge", help="model that judges Claude runs; required when there are Claude runs")
+    parser.add_argument("--codex-judge-effort", default="medium")
+    parser.add_argument("--claude-judge", help="model that judges Codex runs; required when there are Codex runs")
+    parser.add_argument("--claude-judge-effort", default="medium")
     args = parser.parse_args()
     records = [json.loads(line) for line in (args.run_dir / "results.jsonl").read_text().splitlines() if line.strip()]
     records = [r for r in records if r.get("exit") == 0 and not r.get("is_error")]
@@ -149,12 +163,30 @@ def main() -> int:
         kept += scored
         done = {(item["task"], item["host"], item["arm"]) for item in scored}
         records = [r for r in records if (r["task"], r["host"], r["arm"]) not in done]
+    judges = {"codex": args.codex_judge, "codex_effort": args.codex_judge_effort,
+              "claude": args.claude_judge, "claude_effort": args.claude_judge_effort}
+    counts: dict[str, int] = {}
+    for record in records:
+        judge_host = "codex" if record["host"] == "claude" else "claude"
+        if not judges[judge_host]:
+            parser.error(f"--{judge_host}-judge is required: name the model that judges the {record['host']} runs")
+        try:
+            name = grants.family(judges[judge_host])
+        except ValueError as error:
+            parser.error(str(error))
+        if name:
+            counts[name] = counts.get(name, 0) + 1
+    try:
+        grants.reserve(counts, f"judge.py ({len(records)} judgments)")
+    except PermissionError as error:
+        print(error, file=sys.stderr)
+        return 2
     # Write beside the file and swap it in at the end, so an interrupted run leaves the earlier judgments intact.
     partial = out.with_name(out.name + ".partial")
     with futures.ThreadPoolExecutor(max_workers=args.jobs) as pool, partial.open("w") as sink:
         sink.writelines(json.dumps(item) + "\n" for item in kept)
         sink.flush()
-        for result in pool.map(lambda record: judge(args.run_dir, record), records):
+        for result in pool.map(lambda record: judge(args.run_dir, record, judges), records):
             sink.write(json.dumps(result) + "\n")
             sink.flush()
             print(f"{result['task']:24} {result['host']:6} {result['arm']:9} task={result.get('task_score')} report={result.get('report_score')}", flush=True)

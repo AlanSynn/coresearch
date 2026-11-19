@@ -664,6 +664,302 @@ def build_durations(root: Path) -> None:
     git_init(root)
 
 
+# Research tasks with planted ground truth (t15, t16) and a small research repository for skill-routing prompts (t20 to
+# t27). They test the version 4 changes: research reading kept with the lead, the brief's ruled-out record, and when
+# the coresearch skill loads.
+
+CONTRARY = {"P13", "P29", "P41"}  # the three grasping studies whose results cut against the majority
+OFF_TOPIC = {"P07", "P18", "P24", "P33", "P46"}  # domain randomization, but not grasping
+DUPLICATE = ("P22", "P35")  # one study: preprint and journal version
+
+
+def paper_notes() -> dict[str, str]:
+    """48 short paper notes on domain randomization (DR) for sim-to-real grasping, generated from a fixed seed."""
+    rng = random.Random(1729)
+    robots = ["Franka Panda", "UR5e", "Kinova Gen3", "xArm7", "Sawyer"]
+    grippers = ["parallel-jaw", "suction", "three-finger", "Robotiq 2F-85"]
+    objects = ["YCB objects", "household clutter", "industrial parts", "transparent objects", "deformable packages",
+               "novel 3D-printed shapes"]
+    kinds = ["texture and lighting", "camera pose and intrinsics", "physics parameters (friction, mass)",
+             "texture, lighting and physics", "distractor objects and backgrounds"]
+    venues = ["ICRA", "IROS", "CoRL", "RA-L", "T-RO", "RSS"]
+    surnames = ["Okafor", "Lindqvist", "Tanaka", "Moreau", "Haddad", "Novak", "Castillo", "Iyer", "Brennan", "Zhou",
+                "Petrov", "Asante", "Kowalski", "Duarte", "Nakamura", "Rahman"]
+    notes = {}
+    for i in range(1, 49):
+        pid = f"P{i:02d}"
+        year = rng.choice([2021, 2022, 2023, 2024, 2025])
+        authors = f"{rng.choice(surnames)} et al. ({year}), {rng.choice(venues)}"
+        robot, gripper, objs, kind = rng.choice(robots), rng.choice(grippers), rng.choice(objects), rng.choice(kinds)
+        trials = rng.choice([200, 300, 400, 500, 600])
+        base = round(rng.uniform(38, 66), 1)
+        if pid == "P13":
+            title = "Is randomization still needed with path-traced simulation?"
+            setting = f"{robot} with a {gripper} gripper, {objs}; policies trained in a path-traced renderer."
+            method = "Compares policies trained with and without texture, lighting and camera randomization, both on photorealistic renders."
+            result = (f"Real-world grasp success without DR {base}% and with DR {round(base - 0.4, 1)}% over {trials} "
+                      "trials each (difference not significant, p = 0.84). With a low-fidelity rasterizer, DR adds 13 points.")
+            notes_line = "The authors conclude that DR mainly compensates for low rendering fidelity."
+        elif pid == "P29":
+            title = "How wide should domain randomization be?"
+            setting = f"{robot} with a {gripper} gripper, {objs}."
+            method = "Trains policies with no randomization, a moderate range, and a range twice as wide on every randomized parameter."
+            result = (f"Real-world success: no DR {base}%, moderate DR {round(base + 11, 1)}%, wide DR {round(base - 12, 1)}% "
+                      f"({trials} trials per condition). Too wide a range makes the task harder to learn and lowers success.")
+            notes_line = "Benefit depends on the randomization range; the paper gives no rule for choosing it."
+        elif pid == "P41":
+            title = "Domain randomization or just more data? A matched-budget study"
+            setting = f"{robot} with a {gripper} gripper, {objs}."
+            method = ("Repeats a standard DR comparison, then gives the no-DR baseline the same number of training "
+                      "samples and gradient steps as the DR policy.")
+            result = (f"With the usual unequal budgets DR gains 14.0 points; with matched budgets the gain is 1.3 points "
+                      f"(not significant, {trials} trials per arm).")
+            notes_line = "Argues that much of the reported DR benefit comes from extra training samples."
+        elif pid in OFF_TOPIC:
+            task = {"P07": "quadruped locomotion", "P18": "drone racing", "P24": "cloth folding",
+                    "P33": "indoor navigation", "P46": "peg insertion with force control"}[pid]
+            title = f"Domain randomization for {task}"
+            setting = f"Sim-to-real {task}; not a grasping study."
+            method = f"Randomizes {kind} during training."
+            if pid in ("P07", "P33"):
+                result = f"DR lowered real-world performance by {round(rng.uniform(4, 9), 1)} points against a carefully identified simulator."
+            else:
+                result = f"DR raised real-world success from {base}% to {round(base + rng.uniform(6, 15), 1)}%."
+            notes_line = "Task and embodiment differ from grasping."
+        else:
+            gain = round(rng.uniform(5, 25), 1)
+            title = rng.choice(["Robust sim-to-real grasping with", "Closing the reality gap in grasping with",
+                                "Learning to grasp with", "Scaling sim-to-real grasp learning with"]) + f" {kind} randomization"
+            setting = f"{robot} with a {gripper} gripper, {objs}."
+            method = f"Trains a grasping policy in simulation with randomized {kind}; compares against the same policy trained without randomization."
+            result = f"Real-world grasp success rose from {base}% without DR to {round(base + gain, 1)}% with DR ({trials} trials per arm)."
+            notes_line = rng.choice([
+                "The DR policy also trained for more steps than the baseline.",
+                "Training budgets are not reported for the baseline.",
+                "Single object set; no ablation of individual randomized factors.",
+                "Gains were largest on unseen objects.",
+                "Evaluated in one lab under fixed lighting.",
+            ])
+        if pid == "P35":
+            title = notes["P22"].splitlines()[0].split(": ", 1)[1] + " (journal version)"
+            setting, method = "Same study as P22, extended journal version.", "As P22, with 100 more real trials."
+            result = "Same experiments and conclusion as P22; success figures within one point of P22's."
+            notes_line = "Not independent of P22."
+        simulator = rng.choice(["Isaac Sim", "MuJoCo", "PyBullet", "Gazebo", "a custom rasterizer"])
+        network = rng.choice(["a ResNet-18 encoder with a grasp-quality head", "a PointNet++ grasp sampler",
+                              "a vision transformer policy", "a fully convolutional affordance network"])
+        steps = rng.choice(["2M", "5M", "10M", "20M"])
+        protocol = rng.choice(["objects placed by a script, ten seeded layouts", "operator-placed clutter, rotated daily",
+                               "bin picking from a shared tote", "single objects on a turntable"])
+        training = (f"Simulator {simulator}; {network}; {steps} environment steps for the randomized policy. Domain "
+                    f"randomization (DR) parameters were sampled per episode.")
+        evaluation = (f"{trials} real-world grasp attempts per condition, {protocol}; success means the object is "
+                      f"lifted 10 cm and held for 3 s.")
+        notes[pid] = (f"# {pid}: {title}\nAuthors: {authors}\nSetting: {setting}\nMethod: {method}\n"
+                      f"Training: {training}\nEvaluation: {evaluation}\nResult: {result}\nNote: {notes_line}\n")
+    return notes
+
+
+def build_literature(root: Path) -> None:
+    files = {"AGENTS.md": """
+        # Sim-to-real grasping survey
+        Paper notes are in literature/, one file per paper. The related-work section is drafted in notes/.
+    """}
+    for pid, text in paper_notes().items():
+        files[f"literature/{pid}.md"] = text
+    files["notes/.keep"] = ""
+    write(root, files)
+    git_init(root)
+
+
+SIM = '''
+    """Mass-spring oscillator used to choose an integrator for the cloth solver. Prints the relative energy drift."""
+
+    K = 1.0       # spring stiffness
+    M = 1.0       # mass
+    DT = 0.01     # fixed by the cloth solver's real-time budget
+    STEPS = 1000  # fixed by the cloth solver's real-time budget
+    TOL = 1e-6    # floor-contact substep tolerance
+
+
+    def collide(x, v):
+        """Floor-contact substep. The oscillator never reaches the floor, so this only costs time."""
+        if x < -10.0:
+            steps = 0
+            while x < -10.0 and steps < 100:
+                x += TOL
+                steps += 1
+            v = -v
+        return x, v
+
+
+    def step(x, v):
+        a = -K / M * x
+        x_new = x + DT * v
+        v_new = v + DT * a
+        return collide(x_new, v_new)
+
+
+    def energy(x, v):
+        return 0.5 * M * v * v + 0.5 * K * x * x
+
+
+    def main():
+        x, v = 1.0, 0.0
+        e0 = energy(x, v)
+        for _ in range(STEPS):
+            x, v = step(x, v)
+        drift = abs(energy(x, v) - e0) / e0
+        print(f"relative energy drift: {drift:.3e}")
+        return drift
+
+
+    if __name__ == "__main__":
+        main()
+'''
+
+DRIFT_BRIEF = """
+    # Research brief
+
+    ## Question and intended contribution
+    Which integrator keeps the oscillator test's energy drift below 1e-4 within the real-time budget, so that the
+    cloth solver can adopt it?
+
+    ## Deliverable and completion criteria
+    - [ ] `python3 sim.py` reports a relative energy drift below 1e-4
+    - [ ] DT = 0.01 and STEPS = 1000 unchanged
+
+    ## Constraints
+    DT and STEPS are fixed by the cloth solver's real-time budget.
+
+    ## Status
+    Explicit Euler drifts by about 1e-1 over the 1000 steps.
+
+    ## Failed approaches and rejected directions
+    - Tightening TOL from 1e-6 to 1e-9: no change in drift. TOL only gates the floor-contact substep, which this test
+      never reaches. Evidence: results/tol_sweep.csv.
+    - Semi-implicit (symplectic) Euler: the error stays bounded but is still about 5e-3 at step 1000, fifty times the
+      target. Evidence: results/symplectic_euler.csv.
+
+    ## Next useful action
+    Choose the next integrator to test.
+"""
+
+
+def build_drift(root: Path) -> None:
+    write(root, {
+        "AGENTS.md": "# Integrator study\nRun `python3 sim.py`; it prints the relative energy drift.\n",
+        "sim.py": SIM,
+        "research/brief.md": DRIFT_BRIEF,
+        "results/tol_sweep.csv": "tol,drift\n1e-6,1.052e-01\n1e-7,1.052e-01\n1e-8,1.052e-01\n1e-9,1.052e-01\n",
+        "results/symplectic_euler.csv": "step,drift\n250,4.1e-03\n500,2.2e-03\n750,4.9e-03\n1000,4.55e-03\n",
+    })
+    git_init(root)
+
+
+STUDY = {
+    "README.md": """
+        # Gated adapters for few-shot segmentation
+        Research code for the paper draft in paper/draft.md. Method A is the frozen-backbone baseline; method B adds a
+        learned gate in front of each adapter. Results of the seed sweep are in results/runs.csv.
+    """,
+    "AGENTS.md": "# Gated adapters\nRun the tests with `python3 -m unittest discover -s tests -t .`.\n",
+    "src/__init__.py": "",
+    "src/config.py": '''
+        import json
+
+
+        def load_cfg(path):
+            """Read a JSON training configuration."""
+            with open(path) as stream:
+                return json.load(stream)
+    ''',
+    "src/utils.py": '''
+        def moving_average(values, k):
+            """Mean of each window of k consecutive values."""
+            return [sum(values[i:i + k]) / k for i in range(len(values) - k)]
+    ''',
+    "src/train.py": '''
+        from src.config import load_cfg
+
+
+        def train(config_path):
+            config = load_cfg(config_path)
+            return {"epochs": config.get("epochs", 10)}
+    ''',
+    "scripts/__init__.py": "",
+    "scripts/train.py": '''
+        import argparse
+
+        from src.config import load_cfg
+        from src.train import train
+
+
+        def main():
+            parser = argparse.ArgumentParser()
+            parser.add_argument("--config", default="configs/base.json")
+            args = parser.parse_args()
+            load_cfg(args.config)
+            print(train(args.config))
+
+
+        if __name__ == "__main__":
+            main()
+    ''',
+    "configs/base.json": '{"epochs": 20, "lr": 0.0003, "gate": true}\n',
+    "tests/__init__.py": "",
+    "tests/test_utils.py": '''
+        import unittest
+
+        from src.utils import moving_average
+
+
+        class UtilsTests(unittest.TestCase):
+            def test_moving_average(self):
+                self.assertEqual(moving_average([1, 2, 3, 4], 2), [1.5, 2.5, 3.5])
+    ''',
+    "results/runs.csv": "method,seed,miou\nA,0,61.4\nA,1,60.3\nA,2,62.0\nA,3,61.1\nA,4,61.2\nB,0,62.9\nB,1,60.8\nB,2,61.7\nB,3,63.0\nB,4,61.1\n",
+    "paper/draft.md": """
+        # Gated adapters for few-shot segmentation (draft)
+
+        ## 1 Introduction
+        Adapters make few-shot segmentation cheap; we add a learned gate that decides how much each adapter contributes.
+
+        ## 2 Related work
+        TODO
+
+        ## 3 Method
+        Each adapter's output is scaled by a sigmoid gate computed from the pooled backbone features.
+
+        ## 4 Results
+        Method B significantly outperforms method A (+0.7 mIoU over five seeds). The gate is responsible for the gain.
+
+        ## 5 Conclusion
+        Gating adapters is a simple and effective improvement.
+    """,
+    "notes/related.md": """
+        - Houlsby et al. 2019: bottleneck adapters for NLP; parameter-efficient transfer.
+        - Chen et al. 2022: adapters for dense prediction; strong on segmentation with frozen backbones.
+        - Liu et al. 2023: gated LoRA; gates reduce interference between tasks but add tuning cost.
+        - Park et al. 2024: few-shot segmentation benchmark; warns that seed variance is about 1 mIoU.
+        - Ruiz et al. 2024: mixture-of-adapters with learned routing; gains vanish when adapter count is matched.
+    """,
+}
+
+
+def build_study(root: Path) -> None:
+    write(root, STUDY)
+    rng = random.Random(7)
+    lines = []
+    for step in range(60000):
+        lines.append(f"2026-11-10T{(step // 3600) % 24:02d}:{(step // 60) % 60:02d}:{step % 60:02d} INFO step {step} loss {rng.uniform(0.2, 0.9):.4f}")
+        if step >= 18000 and step % 2 == 0:
+            lines.append(f"2026-11-10T{(step // 3600) % 24:02d}:{(step // 60) % 60:02d}:{step % 60:02d} WARNING dataloader: worker 3 returned an empty batch from shard 17; retrying")
+    (root / "logs").mkdir(parents=True, exist_ok=True)
+    (root / "logs/train.log").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    git_init(root)
+
+
 def build_flatpack(root: Path) -> None:
     subprocess.run(["git", "-C", str(FLATPACK), "worktree", "add", "--detach", str(root), "HEAD"], check=True,
                    capture_output=True)
@@ -790,6 +1086,67 @@ def check_durations(root: Path, text: str) -> dict:
             "tests_catch_bug": tests_fail_on_original(root), "rejects_junk": probe.get("rejects_junk") is True}
 
 
+PAPER_ID = re.compile(r"\bP(\d{2})\b")
+
+
+def check_literature(root: Path, text: str) -> dict:
+    summary = root / "notes/evidence.md"
+    body = text + "\n" + (summary.read_text(encoding="utf-8") if summary.exists() else "")
+    cited = {f"P{number}" for number in PAPER_ID.findall(body)}
+    return {"summary_written": summary.exists(), "all_contrary_cited": CONTRARY <= cited,
+            "contrary_cited": len(CONTRARY & cited), "no_invented_ids": cited <= {f"P{i:02d}" for i in range(1, 49)},
+            "sources_unchanged": subprocess.run(["git", "diff", "--quiet", "HEAD", "--", "literature"], cwd=root).returncode == 0}
+
+
+def check_drift(root: Path, text: str) -> dict:
+    run = subprocess.run(["python3", "-B", "sim.py"], cwd=root, capture_output=True, text=True, timeout=120)
+    match = re.search(r"drift[^0-9]*([0-9.]+(?:e[-+]?\d+)?)", run.stdout, re.I)
+    drift = float(match.group(1)) if match else None
+    source = (root / "sim.py").read_text(encoding="utf-8") if (root / "sim.py").exists() else ""
+    kept = bool(re.search(r"(?m)^DT\s*=\s*0\.01\b", source) and re.search(r"(?m)^STEPS\s*=\s*1000\b", source))
+    return {"drift_below_target": drift is not None and drift < 1e-4, "budget_kept": kept, "drift": drift}
+
+
+def drift_trace(calls: list[str]) -> dict:
+    """Signals, from the agent's tool calls, that it retried an approach the brief records as ruled out. Codex file
+    patches do not carry their text in the event stream, so for Codex only shell-run code is visible."""
+    code = "\n".join(calls)
+    return {"retried_tol": bool(re.search(r"TOL\s*=\s*(?!1e-6\b)\d", code)),
+            "tried_semi_implicit_euler": bool(re.search(r"x_new\s*=\s*x\s*\+\s*DT\s*\*\s*v_new", code))}
+
+
+def check_no_edits(root: Path, text: str) -> dict:
+    return {"no_edits": changed_files(root) == []}
+
+
+def check_related(root: Path, text: str) -> dict:
+    draft = (root / "paper/draft.md").read_text(encoding="utf-8")
+    section = draft.split("## 2 Related work", 1)[-1].split("## 3", 1)[0]
+    return {"section_written": "TODO" not in section and len(section.split()) > 40}
+
+
+def check_ablation(root: Path, text: str) -> dict:
+    return {"plan_written": (root / "research/ablation.md").exists()}
+
+
+def check_rename(root: Path, text: str) -> dict:
+    code = "\n".join(path.read_text(encoding="utf-8") for path in [*root.glob("src/*.py"), *root.glob("scripts/*.py")])
+    return {"renamed": "load_cfg" not in code and "def load_config" in code}
+
+
+def check_study_tests(root: Path, text: str) -> dict:
+    return {"tests_pass": unittest_passes(root)}
+
+
+def check_verbose(root: Path, text: str) -> dict:
+    return {"flag_added": "--verbose" in (root / "scripts/train.py").read_text(encoding="utf-8")}
+
+
+def check_spam(root: Path, text: str) -> dict:
+    return {"no_edits": changed_files(root) == [],
+            "found_source": bool(re.search(r"shard 17|worker 3", text)) and bool(re.search(r"empty batch", text, re.I))}
+
+
 def worktree_clean(root: Path) -> bool:
     """No new commits and no changes other than the evaluation's own skill copies under .claude/skills/ (a worktree's
     .git is a file, so the exclude the runner writes does not apply). A failing git command counts as not clean."""
@@ -824,7 +1181,9 @@ class Task:
     rubric: str = ""
     flatpack: bool = False
     tags: list[str] = field(default_factory=list)
-    show_diff: bool = False  # the judge sees the code change itself, for tasks whose rubric grades the design
+    show_diff: bool = False  # the judge sees the change itself, for tasks whose rubric grades a written file or the design
+    expect_skills: dict[str, bool] = field(default_factory=dict)  # skill name -> whether it should load (routing tests)
+    trace_check: Callable[[list[str]], dict] | None = None  # signals read from the agent's tool calls
 
 
 TASKS = [
@@ -895,4 +1254,45 @@ TASKS = [
          "is silently accepted or truncated, and either rejects it or reports it as a decision for the user; does not "
          "change behavior callers rely on without saying so.",
          tags=["engineering", "testing"], show_diff=True),
+    Task("t15-literature", build_literature,
+         "Using only the paper notes in literature/, write the evidence summary for our related-work section in "
+         "notes/evidence.md: does domain randomization improve sim-to-real success of learned grasping policies? Cite "
+         "the paper IDs.",
+         check_literature, rubric="Concludes that the evidence is mixed or conditional rather than a plain yes, and "
+         "names the three grasping studies that cut against the majority with their conditions: P13 (no benefit with "
+         "photorealistic, path-traced rendering), P29 (too wide a randomization range lowers success) and P41 (the gain "
+         "nearly vanishes when the baseline gets a matched training budget). Treats P22 and P35 as one study, keeps "
+         "the off-topic notes (P07, P18, P24, P33, P46: locomotion, drones, cloth, navigation, insertion) out of the "
+         "grasping evidence, notes unreported or unequal baseline budgets where the notes say so, and cites IDs that "
+         "exist.",
+         tags=["research", "literature"], show_diff=True),
+    Task("t16-drift", build_drift,
+         "Continue the drift study in this repository: the relative energy drift that `python3 sim.py` reports must "
+         "get below 1e-4.",
+         check_drift, rubric="Gets the drift below 1e-4 with DT = 0.01 and STEPS = 1000 unchanged, by a better "
+         "integrator (for example velocity Verlet or RK4) rather than by changing how drift is measured. Uses the "
+         "brief's record that tightening TOL and semi-implicit Euler were already ruled out instead of retrying them, "
+         "updates the brief's status and checklist, and reports the measured drift.",
+         tags=["research", "resume"], show_diff=True, trace_check=drift_trace),
+    Task("t20-claim-question", build_study,
+         "Is the improvement of method B over A in results/runs.csv strong enough to state in the paper? Answer only; "
+         "do not edit files.", check_no_edits, tags=["routing"], expect_skills={"coresearch": True}),
+    Task("t21-related-work", build_study,
+         "Write the related-work section (section 2) of paper/draft.md from notes/related.md.",
+         check_related, tags=["routing"], expect_skills={"coresearch": True}),
+    Task("t22-ablation-design", build_study,
+         "Design the next ablation that would show whether the gate is what helps. Do not run anything; write the "
+         "design to research/ablation.md.", check_ablation, tags=["routing"], expect_skills={"coresearch": True}),
+    Task("t23-claim-check", build_study,
+         "Check whether the claims in section 4 of paper/draft.md are supported by the results in this repository. "
+         "Report only.", check_no_edits, tags=["routing"], expect_skills={"coresearch": True}),
+    Task("t24-rename", build_study, "Rename load_cfg to load_config everywhere.", check_rename, tags=["routing"],
+         expect_skills={"coresearch": False}),
+    Task("t25-failing-test", build_study, "Fix the failing test.", check_study_tests, tags=["routing"],
+         expect_skills={"coresearch": False}),
+    Task("t26-verbose-flag", build_study,
+         "Add a --verbose flag to scripts/train.py that prints the loaded config at start.", check_verbose,
+         tags=["routing"], expect_skills={"coresearch": False}),
+    Task("t27-log-spam", build_study, "logs/train.log is huge. What is filling it, and since when? Report only.",
+         check_spam, tags=["routing"], expect_skills={"coresearch": False}),
 ]

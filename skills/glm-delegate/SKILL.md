@@ -1,6 +1,6 @@
 ---
 name: glm-delegate
-description: Hand bulk reading, log triage or mechanical edits to GLM through pi when the raw material is large and the answer is small.
+description: Hand log triage, metadata extraction, passage search or mechanical edits to GLM through pi when the material is large and the answer small and checkable.
 ---
 
 # Delegating bounded work to GLM
@@ -21,26 +21,29 @@ below can be checked against real use.
 
 1. No model. Cut raw output before it reaches your context (`head`, `tail`, `grep`, `--stat`, `wc`, a script). To wait
    for something, use a watcher that prints a line only when a condition changes, with a timeout.
-2. GLM, when bulk text must be read or judged: a cited digest, a classification or a bounded edit. When a watch
-   condition needs reading (is this error real?), filter with `grep` first, send only the matching lines, and act only
-   on a positive verdict with its evidence line.
+2. GLM, when bulk text must be read: cited findings from logs or output, a classification, a fixed-schema extraction
+   or a bounded edit. When a watch condition needs reading (is this error real?), filter with `grep` first, send only
+   the matching lines, and act only on a positive verdict with its evidence line.
 3. Yourself, for everything else.
 
 ## When to delegate
 
 All of these should hold:
 
-- The work is token-heavy but low-judgment: reading or searching large logs, files or documents and returning a cited
-  digest; triaging long test or build output; mechanical, fully specified edits across many files; boilerplate,
-  format conversion, or a first draft of tests from a given spec; a broad first-pass search.
+- The work is token-heavy but low-judgment: reading or searching large logs, output or files and returning cited
+  findings; triaging long test or build output; extracting fields from many documents into a fixed schema, one record
+  per document with locators, checked by count; locating passages for you to read; mechanical, fully specified edits
+  across many files; boilerplate, format conversion, or a first draft of tests from a given spec.
 - The raw material you would otherwise read is large (a rule of thumb, not yet measured: more than about 10k tokens)
   and the answer you need is small. Lookups where you know the location, repeated small calls in a loop, and code you
   are about to edit yourself stay with you.
-- You can check the result cheaply: tests, lint or type checks, a pattern or count check, or file:line citations.
+- You can check the result cheaply, including that nothing is missing: tests, lint or type checks, a pattern or count
+  check, or file:line citations.
 
 Keep these with you: design, architecture or trade-off decisions; security, authorization, persistence or migrations;
-ambiguous work; final judgments, research claims or review verdicts; exact counts and measurements (run the command
-yourself); protected, frozen or pinned files; secrets, credentials and personal or private data, because the content
+ambiguous work; final judgments, research claims or review verdicts; summaries or syntheses of papers, notes,
+reviews or result tables that a conclusion rests on, because a digest checked only by its citations cannot show what
+it left out; exact counts and measurements (run the command yourself); protected, frozen or pinned files; secrets, credentials and personal or private data, because the content
 goes to an external provider.
 
 ## Protocol

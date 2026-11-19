@@ -22,20 +22,30 @@ python3 -B evals/host-policy/judge.py /tmp/host-policy-eval/<name>
 python3 -B evals/host-policy/summarize.py /tmp/host-policy-eval/<name> [more run dirs]
 ```
 
-`run.py` records deterministic checks, tokens, turns and time per run, and the skill files each agent opened, read
-from its tool calls (Claude Code's transcript, Codex's command events). `judge.py` scores each run's task-specific rubric
-and its report with a judge from the other model family (Codex judges Claude Code runs, Claude Code judges Codex runs),
-blind to the arm: workspace paths, which name the arm, are masked in the answer it sees. It does not see the fixture's
-own instructions, so a rubric must state any project rule the answer is graded against. For tasks whose rubric grades
-the design (`show_diff`), it also sees the code change against the fixture commit, cut at 20,000 characters. Runs use live accounts and
-count against their usage. A run or judgment that hits a usage limit is
-marked and left out of the summary; `judge.py --missing` judges only the runs that still lack a score, and
-`run.py --recheck <run dir>` recomputes the deterministic checks after a check is corrected.
+`run.py` records deterministic checks, tokens, turns and time per run, and from the agent's tool calls (Claude Code's
+transcript, Codex's command events) the skill files it opened, its `glm-delegate` calls and any task-specific trace
+signals. Codex runs in the `workspace-write` sandbox, where pi cannot write its lock file and `glm-delegate` fails; to
+let it work as it does under full access, pass both arms
+`--codex-config $'sandbox_workspace_write.network_access = true\nsandbox_workspace_write.writable_roots = ["<home>/.pi/agent"]'`.
+`--candidate-codex-config` adds lines to the candidate's Codex config only, to compare one setting.
+
+`judge.py` scores each run's task-specific rubric and its report with a judge from the other model family (Codex
+judges Claude Code runs, Claude Code judges Codex runs), blind to the arm: workspace paths, which name the arm, are
+masked in the answer it sees. It does not see the fixture's own instructions, so a rubric must state any project rule
+the answer is graded against. For tasks whose rubric grades a written file or the design (`show_diff`), it also sees
+the change against the fixture commit, cut at 20,000 characters. Runs use live accounts and count against their
+usage. A run or judgment that hits a usage limit is marked and left out of the summary; `judge.py --missing` judges
+only the runs that still lack a score, `judge.py --tasks` only the named tasks (routing tasks have no rubric), and
+`run.py --recheck <run dir>` recomputes the deterministic checks and trace fields after a check is corrected.
 
 The tasks target behaviors that standing instructions can change: answering a question without editing, finishing a
 fix, stating assumptions on an ambiguous feature, preserving user work during cleanup, claim discipline on confounded
 results, grounding in sources, triaging a 2.3 MB log, finishing a multi-part implementation, leaving a pinned file
 alone, and two questions on the real flatpack repository. Three engineering tasks (t12 to t14) are the changes the
 `engineering` skill is for: upgrading a stored SQLite schema that users already have, consolidating pricing rules that
-drifted apart against a written policy, and fixing a parser bug with tests that must fail on the old code. They are a small development set, not a benchmark: a
-difference on one task in one run is anecdotal.
+drifted apart against a written policy, and fixing a parser bug with tests that must fail on the old code. Two
+research tasks need a long horizon: a related-work summary over 48 paper notes (t15) that must cite the three
+contrary results and invent no identifier, and a simulation whose energy drift must fall below a target (t16) under a
+brief that records approaches already ruled out, which the trace checks for retries. Tasks t20 to t27 are routing
+tests without a rubric: four research requests that should load `coresearch` and four routine coding requests that
+should not. They are a small development set, not a benchmark: a difference on one task in one run is anecdotal.

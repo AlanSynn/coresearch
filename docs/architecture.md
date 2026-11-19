@@ -13,8 +13,9 @@ and warn that guidance written for weaker models can hold the strongest ones bac
 **Decision.** Coresearch is the single source for those instructions. `host/core.md` holds the shared working
 agreement and `host/<host>.md` the few lines specific to one host. `scripts/coresearch.py host install` renders one
 generated instruction file per host, links every skill in `skills/` into each host's skills directory, links
-`glm-delegate` onto the PATH, and installs the rules that enforce the confirmation boundary (Codex rules, Claude Code
-permission rules) and Claude Code's default effort for Fable 5.2, `high`, which its guide recommends for research and
+`glm-delegate` onto the PATH, and installs confirmation rules for push and clean (Codex rules, Claude Code ask
+rules; they act only in permission modes that ask, so in the user's usual bypass and approval-`never` modes the prose
+boundary in `core.md` is the guard) and Claude Code's default effort for Fable 5.2, `high`, which its guide recommends for research and
 long agentic work and which Claude Code would otherwise leave at `medium`. Procedures moved out of the always-loaded files into skills: `engineering` (the former
 Claude Code policy, split by topic and then restated as criteria for current models; see
 [validation](validation.md#engineering-skill-revision-2026-11-19)), `glm-delegate` and `disk-archive`.

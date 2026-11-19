@@ -138,7 +138,7 @@ the checks and a change summary, not the transcript or the fixture's own instruc
 on the flatpack tasks, which flatpack's `AGENTS.md` asks for, under both arms. The flatpack rubrics state that rule only
 since the revision 3 repeat runs. Seconds include service latency and are not compared.
 
-Revision 3 is the installed version.
+Revision 3 was installed until revision 4 replaced it ([below](#revision-4-of-the-working-agreement-2026-11-19)).
 
 ## Engineering skill revision (2026-11-19)
 
@@ -184,3 +184,104 @@ fixes, host-specific tool rules) are not exercised by any task. The judges grade
 in view, which earlier tasks did not have.
 
 The revised skill is the installed version.
+
+## Revision 4 of the working agreement (2026-11-19)
+
+Three Opus 5.5 reviewers compared revision 3 with the current vendor guides (see [agent practices](agent-practices.md))
+and agreed on changes that remove limits the strongest models do not need, plus one sentence against early stops.
+Revision 4 makes them in one step:
+
+- `host/core.md`: finish the in-scope work before listing other improvements, as notes rather than offers; a question
+  or diagnosis may run read-only commands, tests and scratch probes outside the working tree; routine tool use (web
+  search, fetching papers, documentation and packages, read-only `gh`, the model command-line tools as workers or
+  reviewers on non-sensitive content, the archive tools) is not sending content to an external service; `coresearch`
+  is for work a research claim or manuscript rests on; `glm-delegate` is for checkable bulk work, and reading and
+  synthesis that a claim rests on stay with the lead.
+- `host/codex.md`: do not end a turn on a plan, an offer or a next step the agent is authorized to take.
+- `coresearch`: a description that says when to use it; parallel workers (typically 3–5) for breadth such as a
+  literature landscape; a brief, with the approaches ruled out and their evidence, whenever work crosses a session or
+  a compaction; reviewers at `xhigh` and a capped loop with a fresh evaluator from the other family for subjective
+  deliverables; `/effort max` or `codex --profile ultra` for open-ended discovery.
+- `glm-delegate`: a description limited to log triage, metadata extraction, passage search and mechanical edits.
+- The documents now say that the Codex `prompt` rules and the Claude Code `ask` rules confirm `git push` and
+  `git clean` only in modes that ask. Under bypassed permissions or approval `never`, which the maintainer mostly uses,
+  the instructions are the guard.
+
+[`evals/host-policy`](../evals/host-policy/README.md) compared the installed revision 3 with its skills (baseline)
+against revision 4 with its skills (candidate). The first repetition ran fourteen tasks: four from the version 3 set
+(t01, t05, t07, t08), the two long-horizon research tasks t15 (literature summary) and t16 (drift study with a brief),
+and the routing tasks t20 to t27. The second repetition ran t15 and t16 again. Claude Code ran Fable 5.2 at `high`,
+Codex GPT-6.2 Astra at `high`; judges as in version 3. The records are in the maintainer's
+`.sources/evals/rev4-2026-11-19/`. All figures are measured.
+
+| Host | Arm | Runs | Checks passed | Task score | Report score | Input tokens, median | Claude cost |
+|---|---|---|---|---|---|---|---|
+| Claude Code, Fable 5.2 | revision 3 | 16 | 31/31 | 4.88 | 4.00 | 119,979 | $11.35 |
+| Claude Code, Fable 5.2 | revision 4 | 16 | 31/31 | 4.75 | 3.88 | 135,480 | $14.37 |
+| Codex, Astra | revision 3 | 16 | 31/31 | 4.75 | 4.12 | 114,940 | n/a |
+| Codex, Astra | revision 4 | 16 | 31/31 | 4.88 | 4.38 | 108,698 | n/a |
+
+Scores are means over the eight runs with a rubric (t01, t05, t07, t08, and t15 and t16 twice).
+
+- **Quality was level.** Every check passed under both revisions, and per-run scores differ by at most one point, in
+  both directions.
+- **The research skill now loads where it should.** On the four research requests (t20 to t23), Claude Code loaded
+  `coresearch` in 3 of 4 runs under revision 3 and in 4 of 4 under revision 4. It also loaded the skill for the
+  confounded-claims task t05 under revision 4 only. Codex loaded the skill on all four requests under both revisions.
+  Neither host loaded it on any of the four routine coding requests (t24 to t27) under either revision.
+- **GLM no longer receives the synthesis.** On the literature task, Codex under revision 3 handed GLM a screening
+  pass that included "conditions changing the direction or magnitude of the effect", the judgment the conclusion
+  rests on. In the first repetition the call failed (see corrections); in the second it succeeded. Under revision 4,
+  Codex delegated nothing in the first repetition. In the second it delegated only a metadata inventory, briefed as
+  "No synthesis, calculations, or file edits", and verified the counts itself. In one log-triage run, Codex under
+  revision 4 delegated the triage to GLM with a checkable answer. In the other log runs, both revisions read the skill
+  and searched the log themselves. Claude Code never called GLM.
+- **Ruled-out approaches were not retried.** All eight drift runs reached a drift of 7.4e-6 with the step and the
+  step count unchanged, and none adopted the tolerance change or semi-implicit Euler that the brief rules out. Claude
+  Code re-measured semi-implicit Euler as a comparison row in three of four runs, under both revisions. The trace check
+  only matches the fixture's own form of that integrator, so it did not flag these runs. One judge took a point for
+  it in one revision 4 run.
+- **Research work costs more under revision 4.** Over the nine research runs per arm, Claude Code cost $8.66 under
+  revision 3 and $11.48 under revision 4, and Codex used 21 % more input tokens. Over the seven routine runs, Claude
+  Code cost $2.69 and $2.90, and Codex used 5 % fewer input tokens. The extra work follows the changes:
+  - loading `coresearch` on t05 (195 s against 34 s, the same scores);
+  - checking the related-work citations by web search and reporting the ones it could not confirm (t21);
+  - more comparison evidence in the drift brief (t16).
+  The rubrics saturate (most scores are 5), so these runs cannot show whether the extra work pays off.
+
+**Codex verbosity.** GPT-6.2 Astra and Sol default to `model_verbosity = "low"` in Codex. On t03, t05 and t07, two
+repetitions each, both arms used revision 4. The candidate arm alone had `model_verbosity = "medium"`.
+
+| Verbosity | Runs | Checks passed | Task score | Report score | Final answer, median characters |
+|---|---|---|---|---|---|
+| `low` (default) | 6 | 18/18 | 4.67 | 4.17 | 342 |
+| `medium` | 6 | 18/18 | 4.67 | 4.00 | 543 |
+
+Longer answers did not score better, so Codex keeps the default.
+
+**Corrections made during the evaluation**, each applied to both arms:
+
+- **GLM in the Codex sandbox.** `glm-delegate` fails in Codex's `workspace-write` sandbox, because pi cannot create its
+  lock file in `~/.pi/agent`, so every Codex GLM call of the first repetition failed. The maintainer's Codex sessions
+  mostly run with full access, where it works. The second repetition, the log rerun and the verbosity runs give both
+  arms network access and pi's folder through the new `run.py --codex-config` option.
+- **Counting GLM calls.** The GLM count matched any command that named `glm-delegate`, including reading its
+  `SKILL.md`. It now counts calls of the script only. A recheck of the first repetition changed six counts and no
+  check.
+- **The literature task's judge.** The judge did not see `notes/evidence.md`, the file that t15's rubric grades. It
+  marked down Codex answers that left the merged duplicate and the excluded notes to that file: 3 and 3 under both
+  revisions in the second repetition. Task t15 now shows the judge the written change (`show_diff`), and all eight t15
+  runs were judged again:
+  - Codex in the first repetition: 5 and 4 under both revisions;
+  - Codex in the second repetition: 4 and 4 under revision 3, 5 and 4 under revision 4;
+  - Claude Code: unchanged.
+- **Partial judging.** `judge.py --tasks` would have replaced the whole judgment file with the selected tasks; it now
+  keeps the other tasks' judgments. No judgment was lost.
+
+**Limits.** These are one or two repetitions of development tasks written by the author of the revision, and the
+rubrics are saturated: the comparison shows no loss and better routing, not a quality gain. No run of either revision
+ended on an offer or a deferred next step, so the Codex sentence against early stops was not exercised. Neither were
+the confirmation rules, the evaluator loop for subjective deliverables or the parallel-worker rule. Claude Code ran
+with bypassed permissions, and pi and opencode were not run.
+
+Revision 4 is the installed version.

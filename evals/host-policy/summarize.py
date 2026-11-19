@@ -8,6 +8,11 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import tasks as task_module  # noqa: E402
+
+TASKS = {task.id: task for task in task_module.TASKS}
+
 BAD_WHEN_TRUE = {"ended_with_question", "unqualified_b_wins", "w900_called_failure"}
 # build_removed was informational in the first summaries; it is scored because cleaning up is what t04 asks for.
 # rejects_junk (t14) records whether the agent also rejected malformed input, which the task did not ask for.
@@ -72,16 +77,32 @@ def main(argv: list[str]) -> int:
         print(f"{statistics.mean(report_scores):.2f} | " if report_scores else "n/a | ", end="")
         print(f"{median('input_tokens')} | {median('output_tokens')} | {median('turns')} | {median('seconds')} | "
               f"{cost:.2f} |" if host == "claude" else f"{median('input_tokens')} | {median('output_tokens')} | {median('turns')} | {median('seconds')} | n/a |")
+    routing = defaultdict(lambda: [0, 0])
+    for record in records:
+        task = TASKS.get(record["task"])
+        if task and task.expect_skills and record.get("skill_files") is not None:
+            loaded = {path.split("/", 1)[0] for path in record["skill_files"]}
+            for skill, expected in task.expect_skills.items():
+                cell = routing[(record["host"], record["arm"], skill, expected)]
+                cell[0] += (skill in loaded) == expected
+                cell[1] += 1
+    if routing:
+        print("\nSkill routing (runs that loaded or skipped the skill as expected):\n")
+        print("| Host | Arm | Skill | Should load | Correct |")
+        print("|---|---|---|---|---|")
+        for (host, arm, skill, expected), (good, total) in sorted(routing.items()):
+            print(f"| {host} | {arm} | {skill} | {'yes' if expected else 'no'} | {good}/{total} |")
     print("\nFailed checks and judge scores by task:\n")
-    print("| Task | Host | Arm | Rep | Failed checks | Task | Report | Tokens in/out | Seconds | Skill files read |")
-    print("|---|---|---|---|---|---|---|---|---|---|")
+    print("| Task | Host | Arm | Rep | Failed checks | Task | Report | Tokens in/out | Seconds | Skill files read | GLM calls | Trace |")
+    print("|---|---|---|---|---|---|---|---|---|---|---|---|")
     for record in sorted(records, key=lambda r: (r["task"], r["host"], r["arm"], r["rep"])):
         score = judgments.get((record["rep"], record["task"], record["host"], record["arm"]), {})
         files = record.get("skill_files")
         print(f"| {record['task']} | {record['host']} | {record['arm']} | {record['rep']} | "
               f"{', '.join(passed(record)[2]) or '-'} | {score.get('task_score', '')} | {score.get('report_score', '')} | "
               f"{record.get('input_tokens', '')}/{record.get('output_tokens', '')} | {record.get('seconds', '')} | "
-              f"{', '.join(files) if files else ('none' if files is not None else 'not recorded')} |")
+              f"{', '.join(files) if files else ('none' if files is not None else 'not recorded')} | "
+              f"{record.get('glm_calls', '')} | {', '.join(k for k, v in record.get('trace', {}).items() if v) or ''} |")
     return 0
 
 

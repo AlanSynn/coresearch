@@ -49,32 +49,50 @@ def arm_material(arm: str, host: str, baseline: Path) -> tuple[str, dict[str, Pa
 
 
 SKILL_FILE = re.compile(r"skills/([a-z0-9-]+)/((?:references/)?[\w.-]+\.md)")
+# A call of the glm-delegate script with an option, a redirect or a quoted brief; reading its SKILL.md or
+# "command -v glm-delegate" is not one.
+GLM_CALL = re.compile(r"glm-delegate(?=\s+[-<\"'])")
 
 
-def skill_files(transcript: str, host: str) -> list[str]:
-    """Skill files the agent opened, such as 'engineering/references/design.md', from its tool calls only (not from
-    tool output, which can merely list a directory)."""
-    found: set[str] = set()
+def tool_calls(transcript: str, host: str) -> list[str]:
+    """The agent's tool-call inputs as text (not tool output, which can merely list or echo things): Claude Code's
+    tool_use inputs, with Skill calls as 'Skill <name>', and Codex's executed commands."""
+    calls = []
     for line in transcript.splitlines():
         try:
             event = json.loads(line)
         except json.JSONDecodeError:
             continue
-        calls = []
         if host == "claude" and event.get("type") == "assistant":
             for item in event.get("message", {}).get("content", []):
                 if isinstance(item, dict) and item.get("type") == "tool_use":
                     arguments = item.get("input", {})
                     if item.get("name") == "Skill" and isinstance(arguments, dict):
-                        found.add(f"{arguments.get('skill') or arguments.get('command')}/SKILL.md")
+                        calls.append(f"Skill {arguments.get('skill') or arguments.get('command')}")
                     calls.append(json.dumps(arguments))
-        elif host == "codex" and event.get("type") in ("item.started", "item.completed"):
+        elif host == "codex" and event.get("type") == "item.completed":
             item = event.get("item", {})
             if item.get("type") == "command_execution":
                 calls.append(str(item.get("command", "")))
-        for text in calls:
-            found.update(f"{match.group(1)}/{match.group(2)}" for match in SKILL_FILE.finditer(text))
+    return calls
+
+
+def skill_files(calls: list[str]) -> list[str]:
+    """Skill files the agent opened, such as 'engineering/references/design.md'."""
+    found: set[str] = set()
+    for text in calls:
+        if text.startswith("Skill "):
+            found.add(f"{text.split(' ', 1)[1]}/SKILL.md")
+        found.update(f"{match.group(1)}/{match.group(2)}" for match in SKILL_FILE.finditer(text))
     return sorted(found)
+
+
+def trace_fields(task, calls: list[str]) -> dict:
+    """Per-run fields read from the tool calls: skill files, glm-delegate calls, and the task's own trace signals."""
+    fields = {"skill_files": skill_files(calls), "glm_calls": sum(bool(GLM_CALL.search(text)) for text in calls)}
+    if task.trace_check:
+        fields["trace"] = task.trace_check(calls)
+    return fields
 
 
 def copy_skills(skills: dict[str, Path], destination: Path) -> None:
@@ -117,7 +135,7 @@ def run_one(task, host: str, arm: str, out: Path, baseline: Path, models: dict, 
                     continue
                 if isinstance(event, dict) and event.get("type") == "result":
                     data = event
-            record["skill_files"] = skill_files(result.stdout, "claude")
+            record.update(trace_fields(task, tool_calls(result.stdout, "claude")))
             final = data.get("result", "")
             usage = data.get("usage", {})
             if "hit your" in final and "limit" in final:
@@ -134,7 +152,9 @@ def run_one(task, host: str, arm: str, out: Path, baseline: Path, models: dict, 
             shutil.copy2(Path.home() / ".codex/auth.json", home / "auth.json")
             os.chmod(home / "auth.json", 0o600)
             (home / "AGENTS.md").write_text(text, encoding="utf-8")
-            (home / "config.toml").write_text(f'model = "{models["codex"]}"\nmodel_reasoning_effort = "{models["codex_effort"]}"\n')
+            extra = [models["codex_config"], models["candidate_codex_config"] if arm == "candidate" else ""]
+            (home / "config.toml").write_text(f'model = "{models["codex"]}"\nmodel_reasoning_effort = "{models["codex_effort"]}"\n'
+                                              + "".join(line + "\n" for line in extra if line))
             copy_skills(skills, home / "skills")
             command = ["codex", "exec", "--json", "-o", str(workspace / "final.txt"), "--sandbox", "workspace-write",
                        "--skip-git-repo-check", task.prompt]
@@ -146,7 +166,7 @@ def run_one(task, host: str, arm: str, out: Path, baseline: Path, models: dict, 
                 (home / "auth.json").unlink(missing_ok=True)
             (workspace / "events.jsonl").write_text(result.stdout)
             (workspace / "stderr.txt").write_text(result.stderr[-20000:])
-            record["skill_files"] = skill_files(result.stdout, "codex")
+            record.update(trace_fields(task, tool_calls(result.stdout, "codex")))
             final = (workspace / "final.txt").read_text() if (workspace / "final.txt").exists() else ""
             usage = {"input_tokens": 0, "output_tokens": 0, "turns": 0}
             for line in result.stdout.splitlines():
@@ -187,7 +207,7 @@ def recheck(run_dir: Path) -> int:
         final = (workspace / "final.md").read_text() if (workspace / "final.md").exists() else ""
         for name in ("transcript.jsonl", "events.jsonl"):
             if (workspace / name).exists():
-                record["skill_files"] = skill_files((workspace / name).read_text(), record["host"])
+                record.update(trace_fields(task, tool_calls((workspace / name).read_text(), record["host"])))
         if (workspace / "repo").exists():
             record["checks"] = task.check(workspace / "repo", final)
         elif task.flatpack and task.id == "t10-flatpack-question":
@@ -210,12 +230,17 @@ def main() -> int:
     parser.add_argument("--claude-effort", default="high")
     parser.add_argument("--codex-model", default="gpt-6.2-astra")
     parser.add_argument("--codex-effort", default="high")
+    parser.add_argument("--codex-config", default="",
+                        help="TOML lines added to both arms' Codex config, such as the sandbox settings glm-delegate needs")
+    parser.add_argument("--candidate-codex-config", default="",
+                        help="TOML lines added to the candidate arm's Codex config, to compare one setting")
     parser.add_argument("--recheck", type=Path, help="recompute checks for a finished run directory and exit")
     args = parser.parse_args()
     if args.recheck:
         return recheck(args.recheck)
     models = {"claude": args.claude_model, "claude_effort": args.claude_effort,
-              "codex": args.codex_model, "codex_effort": args.codex_effort}
+              "codex": args.codex_model, "codex_effort": args.codex_effort,
+              "codex_config": args.codex_config, "candidate_codex_config": args.candidate_codex_config}
     selected = [task for task in task_module.TASKS if not args.tasks or task.id in args.tasks]
     args.out.mkdir(parents=True, exist_ok=True)
     jobs = [(task, host, arm) for task in selected for host in args.hosts for arm in args.arms]

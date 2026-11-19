@@ -38,10 +38,12 @@ comparison and belongs to the lead. Use the host's existing job lifecycle for
 long runs rather than adding polling or a Coresearch scheduler.
 
 For a long unattended run, plan it interactively first, then give it an
-executable completion condition (Claude Code `/goal` or a Stop hook, or a
-continuation loop capped at two or three restarts), keep the brief's status,
-result tables and failed approaches current, and commit after each meaningful
-unit of work. When several agents share a run, an elapsed-time budget helps them
+executable completion condition (Claude Code `/goal` or a Stop hook, Codex's
+persisted goals, or a continuation loop capped at two or three restarts), keep
+the brief's status, result tables and failed approaches current, and commit after
+each meaningful unit of work. For an open-ended discovery problem, raise effort
+for that session: `/effort max` in Claude Code, or `codex --profile ultra`, which
+also decides on its own when to bring in subagents. When several agents share a run, an elapsed-time budget helps them
 parallelize; keep a hard timeout of your own.
 
 Participant studies, restricted data, external publication, and expensive actions

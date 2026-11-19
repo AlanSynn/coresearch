@@ -3,15 +3,16 @@
 Use the host's native workers, a configured Claude Code or Codex process, or GLM
 through the `glm-delegate` skill, not a Coresearch runtime. Sonnet, Opus or Sol can
 handle substantial exploration, implementation, tests, and independent audits.
-GLM suits bulk digests of large logs or document sets and mechanical edits whose
-result you can check cheaply. Choose by task and available tools, not a fixed
+GLM suits large logs and build output, metadata extraction, locating passages and
+mechanical edits whose completeness you can check cheaply; reading and synthesis
+that a claim rests on stay with the lead. Choose by task and available tools, not a fixed
 model ladder.
 The lead retains architecture, ambiguous/high-impact decisions, synthesis, and final
 verification. Delegation is optional, including for small research tasks.
 
 A useful assignment contains the objective, only the relevant context/paths,
-owned scope and interfaces, constraints, expected artifact, and completion
-criteria. Specify read-only scope for exploration/audits and disjoint files or
+owned scope and interfaces, the tools and sources to use, how its scope differs
+from sibling workers, constraints, expected artifact, and completion criteria. Specify read-only scope for exploration/audits and disjoint files or
 worktrees for concurrent edits. A worker should flag an architecture issue rather
 than silently expanding its mandate. Do not pass confidential data to a worker
 or service outside the user's authorized environment.
@@ -24,7 +25,9 @@ or revision the tests exercised.
 
 Launch once, then do independent lead work or wait on the host's completion
 mechanism. Consume the completed result when it informs a decision. Do not build
-status-polling loops, repeated progress requests, or automatic reviewer chains.
+status-polling loops, repeated progress requests, or a reviewer on every step; the
+capped evaluator loop for [subjective deliverables](review.md#subjective-deliverables)
+is the exception.
 On a blocked result, the lead decides whether to rescope, supply missing context,
 change workers, or do the task directly. Never claim a worker ran when no runtime
 was available.

@@ -1,32 +1,33 @@
 ---
 name: coresearch
-description: Research projects, literature synthesis, experiments, manuscripts, and evidence review.
+description: Use when a research claim or paper rests on the work: experiment design, literature, analysis, claim review, manuscripts, long studies. Not routine coding.
 ---
 
 # Coresearch
 
-The lead model (Astra in Codex; Fable or Opus in Claude Code) owns framing, strategy, consequential decisions,
-synthesis, and final verification. Delegate bounded gathering, implementation, testing, or review when useful; do
-trivial work directly. A worker completes its assigned scope and returns findings rather than taking over the research
-agenda.
+The lead model (the session's own model) owns framing, strategy, consequential decisions, synthesis, and final
+verification. Delegate bounded gathering, implementation, testing, or review when useful; do trivial work directly. A
+worker completes its assigned scope and returns findings rather than taking over the research agenda.
 
 Aim at the strongest contribution the evidence could support. Build a working end-to-end slice early, run it, and let
 real outputs choose the next step. Explore alternatives quickly, then double down on what works. Validate lightly while
 exploring and rigorously before a claim: a promising preliminary result is a reason to investigate further, not
 evidence for a general conclusion.
 
-Finish the requested deliverable, including relevant validation and correction.
-Resolve ordinary ambiguity from context; ask only when a consequential decision
-cannot responsibly be inferred. Host permissions and the user's scope still apply.
+Breadth-first work (a literature landscape, several candidate methods or datasets, several independent hypotheses)
+goes further with parallel workers, typically three to five, one per independent thread with its own sub-question and
+output file. Keep coupled work, such as one pipeline, with one agent.
 
-Use existing project artifacts. For work spanning sessions, an optional
-[brief](templates/brief.md) records the question, status, evidence, failed approaches,
-and next useful action. A small task needs neither initialization nor a state ledger.
+Finish the requested deliverable, including relevant validation and correction.
+
+Use existing project artifacts. When work will cross a session or a compaction, keep a [brief](templates/brief.md)
+(a project state file with the same fields counts), including the approaches ruled out and why: they stay while the
+reason holds. On resuming, read it and the recent git log and rerun the smallest end-to-end check before new work. A
+task that fits in one session needs no brief.
 
 ## On demand
 
-Read only a reference that adds something needed for the current task; these are
-resources, not stages or a required sequence.
+Read a reference only when the current task needs it; they are resources, not stages.
 
 | Need | Resource |
 |---|---|

@@ -68,20 +68,26 @@ they indicate direction, not what to expect here.
 |---|---|---|
 | Shared core | Who the user is, precedence, what a request authorizes, evidence and report standards, pointers to skills | [`host/core.md`](../host/core.md), rendered into every host's global file by `coresearch.py host install` |
 | Host addition | The few lines only one host needs (Monitor in Claude Code, subagents in Codex, no self-delegation on GLM) | `host/<host>.md` |
-| Enforced rules | What must hold every time | Codex [`host/codex.rules`](../host/codex.rules); Claude Code [`host/claude.settings.json`](../host/claude.settings.json), merged into `settings.json`; project checks such as flatpack's pin check |
+| Confirmation rules | A second guard for push and clean where the host asks | Codex [`host/codex.rules`](../host/codex.rules); Claude Code [`host/claude.settings.json`](../host/claude.settings.json), merged into `settings.json`. They act only in modes that ask (Claude Code default and auto; Codex with approvals on). In Claude Code's bypass mode and Codex with approval `never`, the user's usual modes, they do nothing, so the prose in the shared core is the guard. Project checks such as flatpack's pin check hold in every mode |
 | Skills | Procedures loaded on demand | [`coresearch`](../skills/coresearch/SKILL.md), [`engineering`](../skills/engineering/SKILL.md), [`glm-delegate`](../skills/glm-delegate/SKILL.md), [`disk-archive`](../skills/disk-archive/SKILL.md) |
 | Project | Mission, contracts, commands, protected files | The repository's `AGENTS.md` |
 | Memory | Corrections and confirmed approaches, one per file | The host's memory; prune cautions whose reason no longer holds |
 
 ## Models and effort
 
+The user's installed choices, which favor depth over cost: Claude Code starts on Opus 5.5 at `xhigh` and Fable 5.2 at
+`high` (saved per model); Codex starts on Sol at `max`, with `codex --profile astra` for Astra and `codex --profile
+ultra` for Astra at `ultra`. The vendors object to a global `max` on cost and latency, not quality. Effort is set per
+session; nothing in the instructions asks for less.
+
 | Work | Claude Code | Codex | Note |
 |---|---|---|---|
-| Interactive ideation, sketches, small edits | Opus 5.5 `medium` | Sol `medium` | The user reviews each step anyway |
-| Research design, subtle debugging, result analysis | Fable 5.2 `high` or Opus 5.5 `xhigh` | Astra `high`–`xhigh` | Correctness depends on easily missed cases |
-| Long unattended work, open-ended discovery | Fable 5.2 `high`–`xhigh` with `/goal` | Astra `xhigh`–`max` | `max` where the problem is open-ended |
-| Claim review | The family that did not author the result, read-only | the same | Brief and artifacts, not the narrative |
-| Bulk digests and mechanical edits | GLM through `glm-delegate` | the same | The lead verifies |
+| Interactive work, sketches, small edits | the default (Opus 5.5 `xhigh`), or `/effort medium` when speed matters | the default (Sol `max`) | Lower effort only changes cost and time |
+| Research design, subtle debugging, result analysis | Opus 5.5 `xhigh` or Fable 5.2 `high` | `--profile astra` | Correctness depends on easily missed cases |
+| Open-ended discovery, research with several independent questions | `/effort max` for the session | `--profile ultra`, which brings in subagents on its own | The guides' case for maximum effort |
+| Long unattended work | `/goal` or a Stop hook | Codex's persisted goals | An executable completion check |
+| Claim review and subjective deliverables | The family that did not author the result, read-only, at `xhigh` or above | the same | Brief and artifacts, not the narrative |
+| Logs, metadata, passage search, mechanical edits | GLM through `glm-delegate` | the same | The lead verifies, including completeness; research reading stays with the lead |
 
 ## Evaluation
 

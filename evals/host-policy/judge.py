@@ -132,18 +132,23 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("run_dir", type=Path)
     parser.add_argument("--jobs", type=int, default=6)
+    parser.add_argument("--tasks", nargs="*", help="judge only these task ids (routing tests need no judge)")
     parser.add_argument("--missing", action="store_true",
                         help="keep existing scored judgments and judge only runs without one (after a judge failure)")
     args = parser.parse_args()
     records = [json.loads(line) for line in (args.run_dir / "results.jsonl").read_text().splitlines() if line.strip()]
     records = [r for r in records if r.get("exit") == 0 and not r.get("is_error")]
+    if args.tasks:
+        records = [r for r in records if r["task"] in args.tasks]
     out = args.run_dir / "judgments.jsonl"
-    kept = []
-    if args.missing and out.exists():
-        kept = [item for item in map(json.loads, filter(str.strip, out.read_text().splitlines()))
-                if isinstance(item.get("task_score"), (int, float))]
-        scored = {(item["task"], item["host"], item["arm"]) for item in kept}
-        records = [r for r in records if (r["task"], r["host"], r["arm"]) not in scored]
+    existing = [json.loads(line) for line in out.read_text().splitlines() if line.strip()] if out.exists() else []
+    # Judgments of tasks outside --tasks stay as they are.
+    kept = [item for item in existing if args.tasks and item["task"] not in args.tasks]
+    if args.missing:
+        scored = [item for item in existing if isinstance(item.get("task_score"), (int, float)) and item not in kept]
+        kept += scored
+        done = {(item["task"], item["host"], item["arm"]) for item in scored}
+        records = [r for r in records if (r["task"], r["host"], r["arm"]) not in done]
     # Write beside the file and swap it in at the end, so an interrupted run leaves the earlier judgments intact.
     partial = out.with_name(out.name + ".partial")
     with futures.ThreadPoolExecutor(max_workers=args.jobs) as pool, partial.open("w") as sink:

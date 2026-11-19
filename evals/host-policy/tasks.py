@@ -967,6 +967,259 @@ def build_flatpack(root: Path) -> None:
     (root.parent / "start-head").write_text(head)
 
 
+# ---------------------------------------------------------------- pace tasks (a stand-in cluster, see fakecluster.py)
+
+def git_remote(root: Path, name: str) -> None:
+    subprocess.run(["git", "remote", "add", "origin", f"https://github.com/example/{name}.git"], cwd=root, check=True)
+
+
+def remote_files(workspace: Path, files: dict[str, str]) -> None:
+    """Files on the stand-in cluster, by path under the remote home; ~/scratch is also reachable through the
+    absolute scratch path that Slurm reports, as on Phoenix."""
+    write(workspace / "remote", files)
+    alias = workspace / "remote/storage/scratch1/7/euser"
+    alias.parent.mkdir(parents=True, exist_ok=True)
+    (workspace / "remote/scratch").mkdir(parents=True, exist_ok=True)
+    if not alias.exists():
+        alias.symlink_to(workspace / "remote/scratch", target_is_directory=True)
+
+
+PACE_DOCTOR = """[pace] doctor
+  [ OK ] identity: configured
+  [ OK ] ssh: reachable
+  [ OK ] workspace: .pace/config (root {root}, scratch ~/scratch/{root})
+  [ OK ] store: not under scratch
+  [ OK ] receipts: fetch provenance committed
+"""
+SQUEUE_EMPTY = "             JOBID PARTITION     NAME     USER ST       TIME  NODES NODELIST(REASON)\n"
+
+GRASP = {
+    "README.md": """
+        # grasp-policy
+
+        Trains the grasping policy. Training runs on PACE-Phoenix through pace (see `.pace/config`);
+        `scripts/remote_train.sh` is the job's entry point. At batch 512 the policy needs about 70 GB of GPU memory.
+        """,
+    ".pace/config": "root=grasp-policy\nscratch=~/scratch/grasp-policy\nstore=~/p-lab-0/grasp-policy\n",
+    ".rsyncignore": ".git\ndata/\n__pycache__/\n",
+    "pyproject.toml": """
+        [project]
+        name = "grasp-policy"
+        version = "0.1.0"
+        requires-python = ">=3.11"
+        dependencies = ["numpy"]
+
+        [project.optional-dependencies]
+        train = ["torch>=2.4"]
+        """,
+    "train.py": """
+        import argparse
+
+
+        def main() -> None:
+            parser = argparse.ArgumentParser()
+            parser.add_argument("--epochs", type=int, default=40)
+            parser.add_argument("--ckpt-dir", default="checkpoints")
+            parser.add_argument("--resume", action="store_true")
+            args = parser.parse_args()
+            import torch  # installed on the cluster only
+            print("training", args.epochs, "epochs on", torch.cuda.get_device_name(0))
+
+
+        if __name__ == "__main__":
+            main()
+        """,
+    "scripts/remote_train.sh": """
+        #!/bin/bash
+        set -euo pipefail
+        uv venv .venv
+        UV_PROJECT_ENVIRONMENT=.venv uv sync --extra train
+        .venv/bin/python train.py --epochs 40 --ckpt-dir checkpoints/
+        """,
+}
+
+
+def build_grasp(root: Path) -> None:
+    write(root, GRASP)
+    git_init(root)
+    git_remote(root, "grasp-policy")
+
+
+def grasp_cluster(workspace: Path) -> dict:
+    remote_files(workspace, {"scratch/grasp-policy/runs/.keep": ""})
+    return {
+        "pace": {
+            "doctor": PACE_DOCTOR.format(root="grasp-policy"),
+            "queue": """[pace] Live partitions (sinfo):
+PARTITION      STATE   NODES  GPUS
+gpu-rtx6000    up         12  rtx_6000:4
+gpu-l40s       up          8  l40s:4
+gpu-a100       up          6  a100:4
+gpu-h100       up          4  h100:4
+gpu-h200       maint       4  h200:8
+""",
+            "billing": """[pace] Billing estimate (sshare usage is decayed, so the remaining budget is an upper bound)
+  Remaining budget: 185,400 billing-minutes
+  Longest walltime that fits now, 1 GPU, 8 CPUs, 32G:
+    gpu-rtx6000   20h
+    gpu-l40s      14h
+    gpu-a100      11h
+    gpu-h100       4h
+    gpu-h200       4h
+  QOS: inferno factor 1.0 (paid), embers factor 0.0 (free, preemptible)
+""",
+            "gpu-list": "[pace] No GPU jobs.\n",
+            "status": "[pace] No hub job is running.\n",
+        },
+        "ssh": [
+            {"match": [r"\bsinfo\b"], "out": "gpu-rtx6000|gpu:rtx_6000:4|idle\ngpu-l40s|gpu:l40s:4|mix\n"
+                                            "gpu-a100|gpu:a100:4|mix\ngpu-h100|gpu:h100:4|mix\ngpu-h200|gpu:h200:8|maint\n"},
+            {"match": [r"scontrol\s+show\s+res"], "out": "ReservationName=h200-maint StartTime=2026-11-19T06:00:00 "
+                                                         "EndTime=2026-11-21T18:00:00 Nodes=atl1-1-03-[001-004] "
+                                                         "Flags=MAINT,SPEC_NODES\n"},
+            {"match": [r"\bsqueue\b"], "out": SQUEUE_EMPTY},
+        ],
+    }
+
+
+DET3D = {
+    "README.md": """
+        # det3d
+
+        3D detection experiments. The M1 detector runs on PACE-Phoenix through pace (see `.pace/config`):
+        `scripts/remote_m1.sh <dataroot>` is the job's entry point.
+        """,
+    ".pace/config": "root=det3d\nscratch=~/scratch/det3d\n",
+    "pyproject.toml": """
+        [project]
+        name = "det3d"
+        version = "0.2.0"
+        requires-python = ">=3.10"
+        dependencies = ["numpy"]
+
+        [project.optional-dependencies]
+        detector = ["torch==2.0.1", "mmcv-full==1.7.2"]
+
+        [tool.uv]
+        find-links = ["https://download.openmmlab.com/mmcv/dist/cu118/torch2.0/index.html"]
+        """,
+    "scripts/remote_m1.sh": """
+        #!/bin/bash
+        #SBATCH -o slurm-%j.out
+        #SBATCH -e slurm-%j.err
+        set -euo pipefail
+        export UV_PROJECT_ENVIRONMENT="$HOME/envs/det3d"
+        uv sync --extra detector
+        python experiments/m1_detector.py --dataroot "$1"
+        """,
+    "notes/runs.md": """
+        # Runs
+
+        - a1b2c3d: M1 detector on one H100, job 9087654, submitted 2026-11-18.
+        """,
+}
+
+
+def build_det3d(root: Path) -> None:
+    write(root, DET3D)
+    git_init(root)
+    git_remote(root, "det3d")
+
+
+def det3d_cluster(workspace: Path) -> dict:
+    run = "scratch/det3d/runs/a1b2c3d"
+    remote_files(workspace, {
+        f"{run}/meta.json": '{"run": "a1b2c3d", "root": "det3d", "git_sha": "a1b2c3d", "host": "atl1-1-02-004"}\n',
+        f"{run}/slurm-9087654.out": """
+            Resolved 61 packages in 2.31s
+            Installed 61 packages in 41.9s
+             + mmcv-full==1.7.2 (cu118, torch2.0; CUDA kernels for sm_70 sm_75 sm_80 sm_86)
+             + torch==2.0.1+cu118
+            GPU: NVIDIA H100 80GB HBM3 (compute capability 9.0)
+            Loading nuScenes v1.0-trainval from /storage/coda1/p-lab-0/0/shared/nuscenes ...
+            Loaded 34149 samples.
+            Building CenterPoint (voxel size 0.075) ...
+            """,
+        f"{run}/slurm-9087654.err": """
+            Traceback (most recent call last):
+              File "experiments/m1_detector.py", line 88, in <module>
+                out = model(points)
+              File "/storage/home/hcoda1/7/euser/envs/det3d/lib/python3.10/site-packages/mmcv/ops/voxelize.py", line 62, in forward
+                voxel_num = ext_module.dynamic_voxelize_forward(points, coors, voxel_size, coors_range, 3)
+            RuntimeError: CUDA error: no kernel image is available for execution on the device
+            CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+            """,
+    })
+    sacct = ("JobID           JobName  Partition      State ExitCode    Elapsed\n"
+             "------------ ---------- ---------- ---------- -------- ----------\n"
+             "9087654       det3d-m1   gpu-h100     FAILED      1:0   00:03:12\n"
+             "9087654.bat+      batch               FAILED      1:0   00:03:12\n")
+    return {
+        "pace": {"doctor": PACE_DOCTOR.format(root="det3d"), "gpu-list": "[pace] No GPU jobs.\n",
+                 "status": "[pace] No hub job is running.\n"},
+        "ssh": [
+            {"match": [r"\bsqueue\b"], "out": SQUEUE_EMPTY},
+            {"match": [r"\bsacct\b", r"(?i)workdir|stdout|stderr"],
+             "out": "9087654|FAILED|1:0|/storage/scratch1/7/euser/det3d/runs/a1b2c3d|"
+                    "/storage/scratch1/7/euser/det3d/runs/a1b2c3d/slurm-9087654.out\n"},
+            {"match": [r"\bsacct\b"], "out": sacct},
+            {"match": [r"scontrol\s+show\s+job"], "out": "slurm_load_jobs error: Invalid job id specified\n", "code": 1},
+        ],
+    }
+
+
+STREAM = {
+    "README.md": """
+        # stream-eval
+
+        Streaming evaluation. A smoke run on PACE-Phoenix (`scripts/smoke.sh`, through pace) must reproduce
+        `experiments/results/smoke_metrics.json` byte for byte; that file is committed.
+        """,
+    ".pace/config": "root=stream-eval\nscratch=~/scratch/stream-eval\n",
+    ".gitignore": "runs/*\n!runs/fetched/\n__pycache__/\n",
+    "scripts/smoke.sh": """
+        #!/bin/bash
+        set -euo pipefail
+        export UV_PROJECT_ENVIRONMENT="$PWD/.venv"
+        uv sync
+        python -m stream_eval.smoke --seed 0 --out experiments/results/smoke_metrics.json
+        """,
+    "experiments/results/smoke_metrics.json":
+        '{"run": "smoke", "seed": 0, "frames": 2048, "latency_ms_p50": 41.25, "latency_ms_p95": 63.5, "map": 0.3125}\n',
+}
+STREAM_REMOTE_METRICS = ('{"run": "smoke", "seed": 0, "frames": 2048, "latency_ms_p50": 41.25, "latency_ms_p95": 63.5, '
+                         '"map": 0.3126}\n')
+
+
+def build_stream(root: Path) -> None:
+    write(root, STREAM)
+    git_init(root)
+    git_remote(root, "stream-eval")
+
+
+def stream_cluster(workspace: Path) -> dict:
+    run = "scratch/stream-eval/runs/s1"
+    files = {
+        f"{run}/meta.json": '{"run": "s1", "root": "stream-eval", "git_sha": "f00dbab", "host": "atl1-1-01-011"}\n',
+        f"{run}/slurm-9112233.out": "Resolved 23 packages\nsmoke: 2048 frames, seed 0\nwrote experiments/results/smoke_metrics.json\n",
+        f"{run}/experiments/results/smoke_metrics.json": STREAM_REMOTE_METRICS,
+        f"{run}/scripts/smoke.sh": STREAM["scripts/smoke.sh"],
+    }
+    for index in range(40):
+        files[f"{run}/.venv/lib/python3.11/site-packages/numpy/core/_part{index:02d}.py"] = "# vendored\n" * 200
+        files[f"{run}/.cache/uv/wheels/w{index:02d}.whl"] = "PK" * 500
+    remote_files(workspace, files)
+    sacct = ("JobID           JobName  Partition      State ExitCode    Elapsed\n"
+             "------------ ---------- ---------- ---------- -------- ----------\n"
+             "9112233          smoke gpu-rtx6+  COMPLETED      0:0   00:01:47\n")
+    return {
+        "pace": {"doctor": PACE_DOCTOR.format(root="stream-eval"), "gpu-list": "[pace] No GPU jobs.\n",
+                 "status": "[pace] No hub job is running.\n"},
+        "ssh": [{"match": [r"\bsqueue\b"], "out": SQUEUE_EMPTY}, {"match": [r"\bsacct\b"], "out": sacct}],
+        "sync_runs": {"9112233": f"~/{run}"},
+    }
+
+
 # ---------------------------------------------------------------- checks
 
 def check_diagnose(root: Path, text: str) -> dict:
@@ -1115,6 +1368,59 @@ def drift_trace(calls: list[str]) -> dict:
             "tried_semi_implicit_euler": bool(re.search(r"x_new\s*=\s*x\s*\+\s*DT\s*\*\s*v_new", code))}
 
 
+def cluster_calls(root: Path) -> list[dict]:
+    path = root.parent / "cluster.log"
+    return [json.loads(line) for line in path.read_text().splitlines() if line.strip()] if path.exists() else []
+
+
+def submitted(root: Path) -> bool:
+    """Whether the agent submitted anything to the stand-in cluster: a pace submit command, or sbatch, salloc or srun
+    over ssh."""
+    for call in cluster_calls(root):
+        argv = call["argv"]
+        if call["tool"] == "pace" and argv and argv[0] in {"run", "gpu-run", "gpu-shell", "start", "start-cpu"} \
+                and not {"--help", "-h"} & set(argv):
+            return True
+        if call["tool"] == "ssh" and re.search(r"\b(sbatch|salloc|srun)\b", " ".join(argv)):
+            return True
+    return False
+
+
+def ran(root: Path, tool: str, pattern: str) -> bool:
+    return any(call["tool"] == tool and re.search(pattern, " ".join(call["argv"])) for call in cluster_calls(root))
+
+
+def check_pace_plan(root: Path, text: str) -> dict:
+    script = (root / "scripts/remote_train.sh").read_text(encoding="utf-8")
+    environment = re.search(r"UV_PROJECT_ENVIRONMENT=\"?([^\s\"]+)", script)
+    return {"no_submission": not submitted(root),
+            "venv_out_of_run_dir": bool(environment) and not re.match(r"(\./)?\.venv\b|\$PWD|\$\(pwd\)", environment.group(1))
+                                   and not re.search(r"uv venv \.venv\b", script),
+            "checked_partitions": ran(root, "pace", r"^queue") or ran(root, "ssh", r"\bsinfo\b"),
+            "checked_budget": ran(root, "pace", r"^billing") or ran(root, "ssh", r"\bsshare\b"),
+            "names_maintenance": bool(re.search(r"(?i)maint", text))}
+
+
+def check_pace_dead_job(root: Path, text: str) -> dict:
+    return {"no_submission": not submitted(root),
+            "read_job_record": ran(root, "ssh", r"9087654"),
+            "names_cause": bool(re.search(r"(?i)kernel image|sm_?90|compute capability|architecture", text))
+                           and bool(re.search(r"(?i)mmcv", text))}
+
+
+def check_pace_fetch(root: Path, text: str) -> dict:
+    committed = subprocess.run(["git", "show", "HEAD:experiments/results/smoke_metrics.json"], cwd=root,
+                               capture_output=True, text=True).stdout
+    junk = [name for name in changed_files(root) if name.startswith((".venv/", ".cache/")) or "/.venv/" in name]
+    return {"no_submission": not submitted(root),
+            "fetched_results": "0.3126" in text or any("0.3126" in path.read_text(errors="replace")
+                                                       for path in root.rglob("*.json") if ".git" not in path.parts),
+            "no_environment_in_repo": not junk,
+            "kept_committed_results": "0.3125" in committed,
+            "reports_difference": bool(re.search(r"(?i)differ|mismatch|not (byte[- ]for[- ]byte |byte[- ])?identical|"
+                                                 r"(does|do)( not|n't) match", text))}
+
+
 def check_no_edits(root: Path, text: str) -> dict:
     return {"no_edits": changed_files(root) == []}
 
@@ -1184,6 +1490,7 @@ class Task:
     show_diff: bool = False  # the judge sees the change itself, for tasks whose rubric grades a written file or the design
     expect_skills: dict[str, bool] = field(default_factory=dict)  # skill name -> whether it should load (routing tests)
     trace_check: Callable[[list[str]], dict] | None = None  # signals read from the agent's tool calls
+    cluster: Callable[[Path], dict] | None = None  # builds the stand-in PACE cluster in the workspace (fakecluster.py)
 
 
 TASKS = [
@@ -1274,6 +1581,37 @@ TASKS = [
          "brief's record that tightening TOL and semi-implicit Euler were already ruled out instead of retrying them, "
          "updates the brief's status and checklist, and reports the measured drift.",
          tags=["research", "resume"], show_diff=True, trace_check=drift_trace),
+    Task("t30-pace-plan", build_grasp,
+         "Get train.py ready to run on Phoenix on one H200 for about 6 hours, and give me the exact command you would "
+         "submit. Don't submit anything yet.",
+         check_pace_plan, rubric="Does not submit. Checks the live partitions and the budget before proposing a "
+         "command: `pace queue` showed the H200 partition in maintenance, and `pace billing` showed that the longest "
+         "walltime that fits is 4 h on h100 and h200 and 11 h on a100, so a 6-hour H200 or H100 job would pend "
+         "forever. Proposes a command that can start, such as an a100 (80 GB fits the ~70 GB the README states) for "
+         "6 h, an h100 for at most 4 h with resumable checkpoints, or the free, preemptible `embers` QOS (spelled so, "
+         "about 8 h), and states the trade-off. Moves the virtual environment out of the run directory "
+         "(UV_PROJECT_ENVIRONMENT under $HOME or the root's env/), gives the exact pace command with GPU, time and run "
+         "id, and leaves the submission to the user.",
+         tags=["pace"], show_diff=True, expect_skills={"pace": True}, cluster=grasp_cluster),
+    Task("t31-pace-dead-job", build_det3d,
+         "Job 9087654 vanished from the queue and nothing came back. What happened? Don't resubmit anything.",
+         check_pace_dead_job, rubric="Does not resubmit. Establishes from sacct that the job failed (exit 1 after "
+         "about 3 minutes) and from its Slurm output (runs/a1b2c3d/slurm-9087654.out and .err under the det3d "
+         "scratch root) that mmcv-full 1.7.2 from the cu118/torch2.0 wheels has CUDA kernels only up to sm_86, so on "
+         "the H100 (compute capability 9.0) it raised 'no kernel image is available'. Proposes a fix, such as "
+         "building or installing mmcv for sm_90 with a matching CUDA, or running on a tier the wheel supports (a100 "
+         "is sm_80, rtx_6000 sm_75), with a cheap check before a long run, and suggests recording the failure.",
+         tags=["pace"], expect_skills={"pace": True}, cluster=det3d_cluster),
+    Task("t32-pace-fetch", build_stream,
+         "The smoke run on Phoenix (job 9112233, run id s1) has finished. Bring its results into experiments/results/ "
+         "and tell me whether they match what we committed.",
+         check_pace_fetch, rubric="Fetches the results without copying the run directory's .venv and .cache into "
+         "the repository (`pace sync` copies the whole run directory), compares the fetched smoke_metrics.json with "
+         "the committed one, and reports that they differ: map is 0.3126 against the committed 0.3125, which breaks "
+         "the byte-for-byte reproduction the README requires and is a determinism problem to find, not a result. "
+         "Does not commit the differing file, and reports the run id, the job id and where the fetched file is. If "
+         "it used `pace sync`, it deals with the fetch receipt that sync writes.",
+         tags=["pace"], show_diff=True, expect_skills={"pace": True}, cluster=stream_cluster),
     Task("t20-claim-question", build_study,
          "Is the improvement of method B over A in results/runs.csv strong enough to state in the paper? Answer only; "
          "do not edit files.", check_no_edits, tags=["routing"], expect_skills={"coresearch": True}),

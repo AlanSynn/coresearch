@@ -1,4 +1,5 @@
 """The host command: generated instruction files, linked skills and tools, preservation of foreign files."""
+import json
 import os
 import shutil
 import stat
@@ -34,6 +35,48 @@ class HostTests(unittest.TestCase):
             self.assertEqual((self.home / ".codex/skills" / name).resolve(), (ROOT / "skills" / name).resolve())
         self.assertTrue((self.home / ".local/bin/glm-delegate").resolve().samefile(ROOT / "skills/glm-delegate/scripts/glm-delegate"))
         self.assertTrue((self.home / ".codex/rules/coresearch.rules").resolve().samefile(ROOT / "host/codex.rules"))
+
+    def _external(self, entries: dict[str, str]) -> None:
+        config = self.home / installer.EXTERNAL_SKILLS
+        config.parent.mkdir(parents=True, exist_ok=True)
+        config.write_text(json.dumps(entries))
+
+    def test_external_skills_are_linked_into_every_host(self):
+        skill = self.home / "Workspace/tool/skills/tool"
+        skill.mkdir(parents=True)
+        (skill / "SKILL.md").write_text("---\nname: tool\ndescription: Use when testing.\n---\n")
+        self._external({"tool": "~/Workspace/tool/skills/tool"})
+        installer.host_install(self.home, sorted(installer.HOSTS))
+        for skill_dir in (".claude/skills", ".codex/skills", ".pi/agent/skills"):
+            self.assertEqual((self.home / skill_dir / "tool").resolve(), skill.resolve())
+        self.assertEqual(installer.host_check(self.home, sorted(installer.HOSTS)), [])
+
+    def test_external_skill_copy_is_preserved_until_replace(self):
+        skill = self.home / "tool/skills/tool"
+        skill.mkdir(parents=True)
+        (skill / "SKILL.md").write_text("---\nname: tool\ndescription: Use when testing.\n---\n")
+        self._external({"tool": str(skill)})
+        copy = self.home / ".claude/skills/tool"
+        copy.mkdir(parents=True)
+        (copy / "SKILL.md").write_text("old copy\n")
+        self.assertIn(f"preserved (use --replace to back up and replace): {copy}", installer.host_install(self.home, ["claude"]))
+        installer.host_install(self.home, ["claude"], replace=True)
+        self.assertEqual(copy.resolve(), skill.resolve())
+        backups = list((self.home / installer.BACKUPS).glob("*/.claude/skills/tool/SKILL.md"))
+        self.assertEqual([path.read_text() for path in backups], ["old copy\n"])
+
+    def test_external_skills_are_checked(self):
+        self._external({"coresearch": "~/elsewhere"})
+        with self.assertRaisesRegex(ValueError, "bundled"):
+            installer.host_install(self.home, ["claude"])
+        wrong = self.home / "tool"
+        wrong.mkdir()
+        (wrong / "SKILL.md").write_text("---\nname: other\n---\n")
+        self._external({"tool": str(wrong)})
+        with self.assertRaisesRegex(ValueError, "no SKILL.md named tool"):
+            installer.host_check(self.home, ["claude"])
+        self._external({"tool": "~/not-there"})
+        self.assertIn(f"skipped, source missing: {self.home / 'not-there'}", installer.host_install(self.home, ["claude"]))
 
     def test_foreign_instructions_are_preserved_then_backed_up_on_replace(self):
         target = self.home / ".codex/AGENTS.md"

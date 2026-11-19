@@ -34,6 +34,11 @@ LINKS = {
     None: {".local/bin/glm-delegate": "skills/glm-delegate/scripts/glm-delegate"},
     "codex": {".codex/rules/coresearch.rules": "host/codex.rules"},
 }
+# Skills kept in other repositories, such as private tools' skills, and linked into every host like the bundled ones:
+# a JSON object of skill name to directory ("~/" is the home directory) in this machine's configuration, so they stay
+# out of this repository.
+EXTERNAL_SKILLS = ".config/coresearch/skills.json"
+SKILL_NAME = re.compile(r"[a-z0-9][a-z0-9-]*")
 # Settings merged into a host's settings file. A list gains the entries it lacks; any other value is set only where the
 # key is absent, so a value the user chose, such as an effort level saved with /effort, stays. Nothing is removed.
 SETTINGS = {"claude": (".claude/settings.json", "host/claude.settings.json")}
@@ -118,6 +123,30 @@ def skills() -> list[str]:
     return sorted(path.parent.name for path in (ROOT / "skills").glob("*/SKILL.md"))
 
 
+def external_skills(home: Path) -> dict[str, Path]:
+    """Skills listed in the home's EXTERNAL_SKILLS file, as name and directory; empty when there is no such file.
+
+    A listed directory that exists must hold a SKILL.md with the same name; one that does not exist is kept, and the
+    host command reports it as a missing source."""
+    path = home / EXTERNAL_SKILLS
+    if not path.exists():
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict) or not all(isinstance(value, str) for value in data.values()):
+        raise ValueError(f"{path} must be a JSON object of skill names and directories")
+    found = {}
+    for name, directory in data.items():
+        if not SKILL_NAME.fullmatch(name) or name in skills():
+            raise ValueError(f"{path}: {name!r} is not a valid skill name or is a bundled skill")
+        source = home / directory[2:] if directory.startswith("~/") else Path(directory)
+        manifest = source / "SKILL.md"
+        if source.exists() and not (manifest.is_file()
+                                    and re.search(rf"^name:\s*{name}\s*$", manifest.read_text(encoding="utf-8"), re.M)):
+            raise ValueError(f"{path}: {source} has no SKILL.md named {name}")
+        found[name] = source
+    return found
+
+
 def _digest(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
 
@@ -173,12 +202,15 @@ def _host_items(home: Path, hosts: list[str]) -> list[tuple[str, Path, object]]:
             seen.add(destination)
             items.append((kind, destination, source))
 
+    external = external_skills(home)
     for host in hosts:
         instructions, _, skill_dirs = HOSTS[host]
         add("instructions", home / instructions, render(host))
         for skill_dir in skill_dirs:
             for name in skills():
                 add("link", home / skill_dir / name, (ROOT / "skills" / name).resolve())
+            for name, source in external.items():
+                add("link", home / skill_dir / name, source.resolve() if source.exists() else source)
     for owner, links in LINKS.items():
         if owner is None or owner in hosts:
             for target, source in links.items():

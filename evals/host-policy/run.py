@@ -34,11 +34,17 @@ spec.loader.exec_module(cli)
 CLAUDE_SETTINGS = json.dumps({"pluginConfigs": {"cc-plugin-agents-md@builtin": {"options": {"instructionFiles": "claude-md-and-agents-md"}}}})
 
 
+CANDIDATE_SKILLS: dict[str, Path] = {}  # skills kept outside this checkout, added to the candidate arm (--candidate-skill)
+CLUSTER_TOOLS = ("pace", "ssh", "scp", "rsync", "sshfs", "sbatch", "salloc", "squeue", "sacct", "sinfo", "scontrol", "sshare")
+# Absolute paths would bypass the stand-in cluster tools on PATH, so Claude Code may not call them directly.
+CLUSTER_DENY = [f"Bash({path}:*)" for path in ("/usr/bin/ssh", "/usr/bin/scp", "/usr/bin/rsync", "/opt/homebrew/bin/rsync")]
+
+
 def arm_material(arm: str, host: str, baseline: Path) -> tuple[str, dict[str, Path]]:
     """Global instructions text and {skill name: source dir} for an arm on a host."""
     if arm == "candidate":
         text = cli.render(host)
-        skills = {name: ROOT / "skills" / name for name in cli.skills()}
+        skills = {name: ROOT / "skills" / name for name in cli.skills()} | CANDIDATE_SKILLS
     else:
         text = (baseline / f"{host}_global.md").read_text(encoding="utf-8")
         skills = {path.name: path for path in sorted((baseline / "skills").iterdir())
@@ -102,11 +108,27 @@ def copy_skills(skills: dict[str, Path], destination: Path) -> None:
                         ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
 
 
+def stand_in_cluster(task, workspace: Path) -> dict[str, str]:
+    """Build the stand-in PACE cluster for a pace task and return the environment that puts its tools first on PATH."""
+    (workspace / "cluster.json").write_text(json.dumps(task.cluster(workspace), indent=2), encoding="utf-8")
+    tools = workspace / "bin"
+    tools.mkdir()
+    for name in CLUSTER_TOOLS:
+        shutil.copy2(HERE / "fakecluster.py", tools / name)
+        os.chmod(tools / name, 0o755)
+    path = f"{tools}:{os.environ['PATH']}"
+    # Claude Code's shell snapshot re-applies the user's shell profile, which puts ~/.local/bin (the real pace) first;
+    # its environment file runs after the snapshot, before each command.
+    (workspace / "cluster-env.sh").write_text(f'export PATH="{tools}:$PATH"\nexport FAKE_CLUSTER_DIR="{workspace}"\n')
+    return {"PATH": path, "FAKE_CLUSTER_DIR": str(workspace), "CLAUDE_ENV_FILE": str(workspace / "cluster-env.sh")}
+
+
 def run_one(task, host: str, arm: str, out: Path, baseline: Path, models: dict, timeout: int) -> dict:
     workspace = out / f"{task.id}__{host}__{arm}"
     repo = workspace / "repo"
     workspace.mkdir(parents=True)
     task.build(repo)
+    cluster_env = stand_in_cluster(task, workspace) if task.cluster else {}
     text, skills = arm_material(arm, host, baseline)
     started = time.time()
     record = {"task": task.id, "host": host, "arm": arm, "model": models[host]}
@@ -119,12 +141,15 @@ def run_one(task, host: str, arm: str, out: Path, baseline: Path, models: dict, 
                 exclude.parent.mkdir(parents=True, exist_ok=True)
                 with exclude.open("a") as stream:
                     stream.write("\n.claude/skills/\n")
+            settings = json.loads(CLAUDE_SETTINGS)
+            if task.cluster:
+                settings["permissions"] = {"deny": CLUSTER_DENY}
             command = ["claude", "-p", "--model", models["claude"], "--effort", models["claude_effort"],
-                       "--setting-sources", "project,local", "--settings", CLAUDE_SETTINGS,
+                       "--setting-sources", "project,local", "--settings", json.dumps(settings),
                        "--permission-mode", "bypassPermissions", "--output-format", "stream-json", "--verbose",
                        "--no-session-persistence", task.prompt]
             result = subprocess.run(command, cwd=repo, stdin=subprocess.DEVNULL, capture_output=True, text=True,
-                                    timeout=timeout)
+                                    timeout=timeout, env={**os.environ, **cluster_env})
             (workspace / "transcript.jsonl").write_text(result.stdout)
             (workspace / "stderr.txt").write_text(result.stderr)
             data = {}
@@ -152,7 +177,9 @@ def run_one(task, host: str, arm: str, out: Path, baseline: Path, models: dict, 
             shutil.copy2(Path.home() / ".codex/auth.json", home / "auth.json")
             os.chmod(home / "auth.json", 0o600)
             (home / "AGENTS.md").write_text(text, encoding="utf-8")
-            extra = [models["codex_config"], models["candidate_codex_config"] if arm == "candidate" else ""]
+            extra = [models["codex_config"], models["candidate_codex_config"] if arm == "candidate" else "",
+                     # Non-login shells keep the stand-in cluster tools first on PATH; the sandbox keeps the network off.
+                     "allow_login_shell = false" if task.cluster else ""]
             (home / "config.toml").write_text(f'model = "{models["codex"]}"\nmodel_reasoning_effort = "{models["codex_effort"]}"\n'
                                               + "".join(line + "\n" for line in extra if line))
             copy_skills(skills, home / "skills")
@@ -161,7 +188,7 @@ def run_one(task, host: str, arm: str, out: Path, baseline: Path, models: dict, 
             try:
                 # An open stdin makes codex exec wait for more input, so close it.
                 result = subprocess.run(command, cwd=repo, stdin=subprocess.DEVNULL, capture_output=True, text=True,
-                                        timeout=timeout, env={**os.environ, "CODEX_HOME": str(home)})
+                                        timeout=timeout, env={**os.environ, **cluster_env, "CODEX_HOME": str(home)})
             finally:
                 (home / "auth.json").unlink(missing_ok=True)
             (workspace / "events.jsonl").write_text(result.stdout)
@@ -234,8 +261,15 @@ def main() -> int:
                         help="TOML lines added to both arms' Codex config, such as the sandbox settings glm-delegate needs")
     parser.add_argument("--candidate-codex-config", default="",
                         help="TOML lines added to the candidate arm's Codex config, to compare one setting")
+    parser.add_argument("--candidate-skill", action="append", default=[], metavar="NAME=DIR",
+                        help="add or replace a skill in the candidate arm, such as one kept in another repository")
     parser.add_argument("--recheck", type=Path, help="recompute checks for a finished run directory and exit")
     args = parser.parse_args()
+    for item in args.candidate_skill:
+        name, _, directory = item.partition("=")
+        if not (Path(directory) / "SKILL.md").is_file():
+            parser.error(f"--candidate-skill {item}: no SKILL.md in {directory}")
+        CANDIDATE_SKILLS[name] = Path(directory).resolve()
     if args.recheck:
         return recheck(args.recheck)
     models = {"claude": args.claude_model, "claude_effort": args.claude_effort,

@@ -38,6 +38,7 @@ Read a reference only when the current task needs it; they are resources, not st
 | A bounded worker assignment, including GLM for bulk work | [Delegation](references/delegation.md) |
 | An independent review before a result supports a claim | [Claim review](references/review.md) |
 | NCSA Delta GPU runs, staging, result retrieval, storage audit | [NCSA Delta](references/ncsa.md) |
+| PACE-Phoenix GPU runs | the `pace` skill |
 
 Keep empirical claims traceable to inspected sources or actual runs. A retrieved
 file is not a verified claim. Preserve contrary evidence and unresolved limits

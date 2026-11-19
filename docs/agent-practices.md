@@ -69,7 +69,7 @@ they indicate direction, not what to expect here.
 | Shared core | Who the user is, precedence, what a request authorizes, evidence and report standards, pointers to skills | [`host/core.md`](../host/core.md), rendered into every host's global file by `coresearch.py host install` |
 | Host addition | The few lines only one host needs (Monitor in Claude Code, subagents in Codex, no self-delegation on GLM) | `host/<host>.md` |
 | Confirmation rules | A second guard for push and clean where the host asks | Codex [`host/codex.rules`](../host/codex.rules); Claude Code [`host/claude.settings.json`](../host/claude.settings.json), merged into `settings.json`. They act only in modes that ask (Claude Code default and auto; Codex with approvals on). In Claude Code's bypass mode and Codex with approval `never`, the user's usual modes, they do nothing, so the prose in the shared core is the guard. Project checks such as flatpack's pin check hold in every mode |
-| Skills | Procedures loaded on demand | [`coresearch`](../skills/coresearch/SKILL.md), [`engineering`](../skills/engineering/SKILL.md), [`glm-delegate`](../skills/glm-delegate/SKILL.md), [`disk-archive`](../skills/disk-archive/SKILL.md) |
+| Skills | Procedures loaded on demand | [`coresearch`](../skills/coresearch/SKILL.md), [`engineering`](../skills/engineering/SKILL.md), [`glm-delegate`](../skills/glm-delegate/SKILL.md), [`disk-archive`](../skills/disk-archive/SKILL.md); skills kept with their own tools, such as `pace`, through `~/.config/coresearch/skills.json` |
 | Project | Mission, contracts, commands, protected files | The repository's `AGENTS.md` |
 | Memory | Corrections and confirmed approaches, one per file | The host's memory; prune cautions whose reason no longer holds |
 

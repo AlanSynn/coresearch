@@ -27,7 +27,17 @@ transcript, Codex's command events) the skill files it opened, its `glm-delegate
 signals. Codex runs in the `workspace-write` sandbox, where pi cannot write its lock file and `glm-delegate` fails; to
 let it work as it does under full access, pass both arms
 `--codex-config $'sandbox_workspace_write.network_access = true\nsandbox_workspace_write.writable_roots = ["<home>/.pi/agent"]'`.
-`--candidate-codex-config` adds lines to the candidate's Codex config only, to compare one setting.
+`--candidate-codex-config` adds lines to the candidate's Codex config only, to compare one setting, and
+`--candidate-skill NAME=DIR` adds or replaces one skill in the candidate arm, such as a skill kept in another
+repository.
+
+The pace tasks (t30 to t32) run against a stand-in for the PACE-Phoenix cluster, [`fakecluster.py`](fakecluster.py),
+installed in the run's workspace as `pace`, `ssh`, `scp`, `rsync` and the Slurm commands. It answers from the
+task's canned cluster state and logs every call, so a check can tell whether the agent submitted anything, and
+nothing reaches the real cluster: Claude Code gets the stand-in first on its PATH through `CLAUDE_ENV_FILE`, which
+runs after its shell profile, and may not call the real tools by absolute path; Codex runs non-login shells, so
+the profile cannot put the real `pace` first, inside a sandbox without network. Help, version and cost commands run
+the real `pace`, whose own SSH calls reach the stand-in.
 
 `judge.py` scores each run's task-specific rubric and its report with a judge from the other model family (Codex
 judges Claude Code runs, Claude Code judges Codex runs), blind to the arm: workspace paths, which name the arm, are
@@ -48,4 +58,6 @@ research tasks need a long horizon: a related-work summary over 48 paper notes (
 contrary results and invent no identifier, and a simulation whose energy drift must fall below a target (t16) under a
 brief that records approaches already ruled out, which the trace checks for retries. Tasks t20 to t27 are routing
 tests without a rubric: four research requests that should load `coresearch` and four routine coding requests that
-should not. They are a small development set, not a benchmark: a difference on one task in one run is anecdotal.
+should not. Three pace tasks prepare a GPU run that cannot start as asked (t30), diagnose a job that vanished from
+the queue (t31) and fetch a smoke run whose result no longer reproduces (t32). They are a small development set,
+not a benchmark: a difference on one task in one run is anecdotal.

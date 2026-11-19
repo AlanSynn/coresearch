@@ -285,3 +285,56 @@ the confirmation rules, the evaluator loop for subjective deliverables or the pa
 with bypassed permissions, and pi and opencode were not run.
 
 Revision 4 is the installed version.
+
+## Pace skill revision (2026-11-19)
+
+The `pace` skill, for running work on Georgia Tech's PACE-Phoenix cluster with the user's `pace` command, was the one
+user-wide skill outside Coresearch. It was a 28 KB file in the private `phoenix` repository, copied into Claude Code's
+and the shared `~/.agents` skill folders but not into pi's or opencode's. It mixed the developer runbook with running
+jobs. It also carried the state of one experiment repository from September, including a person-specific log path,
+and it prescribed a fixed retry count and polling. The revision splits it in two:
+- the developer runbook moves into the repository's `AGENTS.md`;
+- the usage skill (5.7 KB plus a 3 KB workspace reference) is restated for current models: submitting defers to the
+  working agreement's rule for cluster allocations, waiting uses a watcher, a failed run is diagnosed before it is
+  resubmitted and recorded afterwards, and the project-specific state is gone.
+
+The skill stays in `phoenix`, beside the code it describes. `host install` links it into every host from
+`~/.config/coresearch/skills.json`, so it never enters this public repository.
+
+[`evals/host-policy`](../evals/host-policy/README.md) compared the two skills on three pace tasks against a stand-in
+cluster: preparing a GPU run that cannot start as asked (t30), diagnosing a job that vanished from the queue (t31) and
+fetching a smoke run that no longer reproduces (t32). Both arms used the installed revision 4 instructions and skills,
+and only `pace` differed (and one routing row in `coresearch`). Claude Code ran Fable 5.2 at `high`, Codex GPT-6.2
+Astra at `high`; three repetitions. The first repetition used a draft that named `squeue` and `sacct` without saying
+that they run on the login node over SSH, and both hosts guessed host names. The second and third used the revision
+with that line. The records are in the maintainer's `.sources/evals/pace-2026-11-19/`. All figures are measured.
+
+| Host | Skill | Runs | Checks passed | Task score | Report score | Input tokens, median | Claude cost |
+|---|---|---|---|---|---|---|---|
+| Claude Code, Fable 5.2 | previous | 9 | 39/39 | 4.22 | 4.00 | 402,159 | $11.23 |
+| Claude Code, Fable 5.2 | revised | 9 | 39/39 | 4.11 | 4.00 | 315,518 | $8.32 |
+| Codex, Astra | previous | 9 | 37/39 | 3.11 | 3.89 | 152,484 | n/a |
+| Codex, Astra | revised | 9 | 39/39 | 3.44 | 4.00 | 194,385 | n/a |
+
+On the second and third repetitions alone, Claude Code's task scores are 4.17 under both skills and Codex's are 3.00
+against 3.33.
+
+- **Nothing was submitted.** In all 36 runs no agent ran a submit command, and every run loaded the skill.
+- **Codex checked the budget.** On t30, Codex under the previous skill skipped `pace billing` in two of three runs and
+  proposed a 6-hour job that the budget cannot start. Under the revision it checked in all three. Under both skills
+  it still offered the infeasible H200 command as its main answer, and it named the cause of the dead job without
+  proposing a fix. The judges marked down both arms for these.
+- **Claude Code cost less.** The revision used fewer input tokens in 8 of 9 Claude Code pairs (median ratio 0.75) and
+  cost 26 % less. Codex used about the same input (median ratio 1.04) and wrote longer answers.
+- **The old example state leaked.** In two of three dead-job runs, Claude Code under the previous skill read the
+  September repository's person-specific log path on an unrelated project; under the revision, no run did.
+- **Receipts.** Claude Code under the revision fetched with `pace sync` into a temporary directory in two of three
+  fetch runs. That left the fetch receipt uncommitted, which it reported, and a judge took a point each time; the
+  previous skill forbade `pace sync` for completed jobs.
+
+**Limits.** Three development tasks against a stand-in cluster with canned answers, written by the author of the
+revision. The stand-in has no queue dynamics, real failures or real budgets, and help text comes from the real
+`pace`. The first repetition's candidate is the draft, so the nine-run figures mix two versions. The judges'
+rubrics ask for an explicit run id, which most runs under both skills omitted.
+
+The revised skill is the installed version.

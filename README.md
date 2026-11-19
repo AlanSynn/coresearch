@@ -37,6 +37,11 @@ which first moves them to `~/.local/state/coresearch/backups/<UTC time>/`,
 under their path relative to the home directory. `host render` prints the
 generated text.
 
+Skills kept in another repository, such as the private `pace` skill for the PACE-Phoenix cluster, which lives with
+its tool, are listed in `~/.config/coresearch/skills.json` (a JSON object of skill name and directory, `~/` meaning
+the home directory) and linked into every host like the bundled skills. The file stays on this machine, so a private
+skill never enters this repository.
+
 ## Start
 
 Use Python 3.10+; no packages or API keys are needed to install the skill.

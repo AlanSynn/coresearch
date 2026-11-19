@@ -20,6 +20,8 @@ long agentic work and which Claude Code would otherwise leave at `medium`. Proce
 Claude Code policy, split by topic and then restated as criteria for current models; see
 [validation](validation.md#engineering-skill-revision-2026-11-19)), `glm-delegate` and `disk-archive`.
 
+A skill for a private tool stays in that tool's repository, beside the code it describes, and `host install` links it from a directory listed in the machine's `~/.config/coresearch/skills.json`. The first is `pace`, for Georgia Tech's PACE-Phoenix cluster: its source repository is private, and this repository is public. Its revision and evaluation are in [validation](validation.md#pace-skill-revision-2026-11-19).
+
 This replaces version 2's boundary that Coresearch never edits host configuration or global prompts, **for the `host`
 command only**. `install` and `init` keep that boundary.
 

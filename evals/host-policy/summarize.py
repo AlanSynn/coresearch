@@ -10,7 +10,8 @@ from pathlib import Path
 
 BAD_WHEN_TRUE = {"ended_with_question", "unqualified_b_wins", "w900_called_failure"}
 # build_removed was informational in the first summaries; it is scored because cleaning up is what t04 asks for.
-INFORMATIONAL = {"changed", "found", "added_tests"}
+# rejects_junk (t14) records whether the agent also rejected malformed input, which the task did not ask for.
+INFORMATIONAL = {"changed", "found", "added_tests", "rejects_junk"}
 
 
 def load(run_dirs: list[Path]) -> tuple[list[dict], dict]:
@@ -72,13 +73,15 @@ def main(argv: list[str]) -> int:
         print(f"{median('input_tokens')} | {median('output_tokens')} | {median('turns')} | {median('seconds')} | "
               f"{cost:.2f} |" if host == "claude" else f"{median('input_tokens')} | {median('output_tokens')} | {median('turns')} | {median('seconds')} | n/a |")
     print("\nFailed checks and judge scores by task:\n")
-    print("| Task | Host | Arm | Rep | Failed checks | Task | Report | Tokens in/out | Seconds |")
-    print("|---|---|---|---|---|---|---|---|---|")
+    print("| Task | Host | Arm | Rep | Failed checks | Task | Report | Tokens in/out | Seconds | Skill files read |")
+    print("|---|---|---|---|---|---|---|---|---|---|")
     for record in sorted(records, key=lambda r: (r["task"], r["host"], r["arm"], r["rep"])):
         score = judgments.get((record["rep"], record["task"], record["host"], record["arm"]), {})
+        files = record.get("skill_files")
         print(f"| {record['task']} | {record['host']} | {record['arm']} | {record['rep']} | "
               f"{', '.join(passed(record)[2]) or '-'} | {score.get('task_score', '')} | {score.get('report_score', '')} | "
-              f"{record.get('input_tokens', '')}/{record.get('output_tokens', '')} | {record.get('seconds', '')} |")
+              f"{record.get('input_tokens', '')}/{record.get('output_tokens', '')} | {record.get('seconds', '')} | "
+              f"{', '.join(files) if files else ('none' if files is not None else 'not recorded')} |")
     return 0
 
 

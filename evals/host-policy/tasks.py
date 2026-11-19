@@ -8,10 +8,13 @@ Qualitative parts (assumptions, claim wording, research design) are scored separ
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import random
 import re
+import shutil
 import subprocess
+import tempfile
 import textwrap
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -361,6 +364,306 @@ def build_frozen(root: Path) -> None:
     git_init(root)
 
 
+# Engineering tasks: a stored-data migration, a consolidation of drifted rules, and a test strategy. They are the
+# changes the engineering skill is for, so they compare versions of that skill.
+
+NOTES_STORE = '''
+    """Note storage for the lab's desktop app."""
+    import sqlite3
+
+    SCHEMA = """
+    CREATE TABLE IF NOT EXISTS notes (
+        id INTEGER PRIMARY KEY,
+        title TEXT NOT NULL,
+        body TEXT NOT NULL DEFAULT ''
+    )
+    """
+
+
+    class NoteStore:
+        def __init__(self, path):
+            self.db = sqlite3.connect(path)
+            self.db.execute(SCHEMA)
+            self.db.commit()
+
+        def add(self, title, body=""):
+            cursor = self.db.execute("INSERT INTO notes (title, body) VALUES (?, ?)", (title, body))
+            self.db.commit()
+            return cursor.lastrowid
+
+        def get(self, note_id):
+            row = self.db.execute("SELECT id, title, body FROM notes WHERE id = ?", (note_id,)).fetchone()
+            return None if row is None else {"id": row[0], "title": row[1], "body": row[2]}
+
+        def all(self):
+            rows = self.db.execute("SELECT id, title, body FROM notes ORDER BY id")
+            return [{"id": r[0], "title": r[1], "body": r[2]} for r in rows]
+
+        def close(self):
+            self.db.close()
+'''
+
+NOTES_TESTS = '''
+    import tempfile
+    import unittest
+    from pathlib import Path
+
+    from notes.store import NoteStore
+
+
+    class StoreTests(unittest.TestCase):
+        def setUp(self):
+            self.directory = tempfile.TemporaryDirectory()
+            self.store = NoteStore(Path(self.directory.name) / "notes.db")
+
+        def tearDown(self):
+            self.store.close()
+            self.directory.cleanup()
+
+        def test_add_and_get(self):
+            note_id = self.store.add("groceries", "milk")
+            self.assertEqual(self.store.get(note_id)["title"], "groceries")
+
+        def test_all_in_order(self):
+            self.store.add("a")
+            self.store.add("b")
+            self.assertEqual([note["title"] for note in self.store.all()], ["a", "b"])
+'''
+
+# Opens a database that release 1.4 created, as a user's next start-up would, then starts up again on the upgraded file.
+NOTES_PROBE = '''
+import json, sqlite3, tempfile
+from pathlib import Path
+result = {"upgrade_keeps_data": False, "tags_round_trip": False}
+try:
+    from notes.store import NoteStore
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "notes.db"
+        db = sqlite3.connect(path)
+        db.execute("CREATE TABLE notes (id INTEGER PRIMARY KEY, title TEXT NOT NULL, body TEXT NOT NULL DEFAULT '')")
+        db.executemany("INSERT INTO notes (title, body) VALUES (?, ?)", [("old one", "kept"), ("old two", "")])
+        db.commit()
+        db.close()
+        store = NoteStore(path)
+        notes = store.all()
+        result["upgrade_keeps_data"] = [(n["title"], n["body"], n.get("tags")) for n in notes] == [
+            ("old one", "kept", []), ("old two", "", [])]
+        store.add_tag(notes[0]["id"], "work")
+        store.add_tag(notes[0]["id"], "alpha")
+        store.close()
+        store = NoteStore(path)
+        tagged = store.notes_with_tag("work")
+        result["tags_round_trip"] = ([(n["title"], n["tags"]) for n in tagged] == [("old one", ["alpha", "work"])]
+                                     and store.get(notes[0]["id"])["tags"] == ["alpha", "work"])
+        store.close()
+except Exception as error:
+    result["error"] = f"{type(error).__name__}: {error}"
+print(json.dumps(result))
+'''
+
+
+def build_tags(root: Path) -> None:
+    write(root, {
+        "AGENTS.md": """
+            # notes
+            Note storage for the lab's desktop app. Every user has a notes.db created by release 1.4, and the app opens
+            it with `NoteStore(path)` at start-up. Run the tests with `python3 -m unittest discover -s tests -t .`.
+        """,
+        "notes/__init__.py": "",
+        "notes/store.py": NOTES_STORE,
+        "tests/__init__.py": "",
+        "tests/test_store.py": NOTES_TESTS,
+    })
+    git_init(root)
+
+
+PRICING_POLICY = """
+    # Pricing policy
+
+    Approved by finance on 2026-10-01.
+
+    - SAVE10 takes 10% off the subtotal.
+    - FLAT5 takes $5.00 off a subtotal of $50.00 or more, measured before tax.
+    - A purchase uses at most one coupon; an unknown code is ignored.
+    - Sales tax is 8.25% of the subtotal after the discount.
+    - Amounts are shown in dollars, rounded to cents.
+"""
+
+SHOP = {
+    "shop/__init__.py": "",
+    "shop/orders.py": '''
+        TAX_RATE = 0.0825
+
+
+        def order_total(lines, coupon=None):
+            """Total in dollars for (unit_price, quantity) lines, rounded to cents."""
+            subtotal = sum(price * quantity for price, quantity in lines)
+            if coupon == "SAVE10":
+                subtotal *= 0.9
+            elif coupon == "FLAT5" and subtotal >= 50:
+                subtotal -= 5
+            return round(subtotal * (1 + TAX_RATE), 2)
+    ''',
+    "shop/invoices.py": '''
+        TAX = 0.0825
+
+
+        def invoice_lines(lines, coupon=None):
+            """Invoice rows as (description, amount), ending with the tax and the total."""
+            rows = []
+            subtotal = 0.0
+            for price, quantity in lines:
+                amount = round(price * quantity, 2)
+                rows.append((f"{quantity} x {price:.2f}", amount))
+                subtotal += amount
+            if coupon == "SAVE10":
+                discount = round(subtotal * 0.10, 2)
+                rows.append(("Discount SAVE10", -discount))
+                subtotal -= discount
+            elif coupon == "FLAT5" and subtotal > 50:
+                rows.append(("Discount FLAT5", -5.0))
+                subtotal -= 5
+            tax = round(subtotal * TAX, 2)
+            rows.append(("Tax", tax))
+            rows.append(("Total", round(subtotal + tax, 2)))
+            return rows
+    ''',
+    "shop/quotes.py": '''
+        def quote(lines, coupon=None):
+            """Price summary for a quote: subtotal after discount, tax and total."""
+            subtotal = sum(p * q for p, q in lines)
+            if coupon == "SAVE10":
+                subtotal = subtotal - subtotal * 0.1
+            elif coupon == "FLAT5" and subtotal * 1.0825 >= 50:
+                subtotal = subtotal - 5
+            return {"subtotal": round(subtotal, 2), "tax": round(subtotal * 0.0825, 2), "total": round(subtotal * 1.0825, 2)}
+    ''',
+    "tests/__init__.py": "",
+    "tests/test_shop.py": '''
+        import unittest
+
+        from shop.invoices import invoice_lines
+        from shop.orders import order_total
+        from shop.quotes import quote
+
+
+        class ShopTests(unittest.TestCase):
+            def test_order_total(self):
+                self.assertEqual(order_total([(10, 2)]), 21.65)
+                self.assertEqual(order_total([(200, 1)], "SAVE10"), 194.85)
+                self.assertEqual(order_total([(30, 2)], "FLAT5"), 59.54)
+
+            def test_invoice_lines(self):
+                self.assertEqual(invoice_lines([(10, 2)]), [("2 x 10.00", 20.0), ("Tax", 1.65), ("Total", 21.65)])
+                self.assertEqual(invoice_lines([(30, 2)], "FLAT5")[-1], ("Total", 59.54))
+
+            def test_quote(self):
+                self.assertEqual(quote([(10, 2)]), {"subtotal": 20.0, "tax": 1.65, "total": 21.65})
+    ''',
+}
+
+# The two drifted rules, read against docs/pricing.md: FLAT5 applies at exactly $50.00, and to the pre-tax subtotal.
+PRICING_PROBE = '''
+import json
+result = {"callers_work": False, "follows_policy": False}
+try:
+    from shop.invoices import invoice_lines
+    from shop.orders import order_total
+    from shop.quotes import quote
+    result["callers_work"] = (order_total([(10, 2)]) == 21.65 and invoice_lines([(10, 2)])[-1] == ("Total", 21.65)
+                              and quote([(10, 2)]) == {"subtotal": 20.0, "tax": 1.65, "total": 21.65})
+    rows = invoice_lines([(25, 2)], "FLAT5")
+    result["follows_policy"] = (order_total([(25, 2)], "FLAT5") == 48.71 and rows[-1] == ("Total", 48.71)
+                                and any(amount == -5.0 for _, amount in rows) and quote([(48, 1)], "FLAT5")["subtotal"] == 48.0)
+except Exception as error:
+    result["error"] = f"{type(error).__name__}: {error}"
+print(json.dumps(result))
+'''
+
+
+def build_pricing(root: Path) -> None:
+    write(root, {
+        "AGENTS.md": """
+            # shop
+            The pricing policy is docs/pricing.md. Run the tests with `python3 -m unittest discover -s tests -t .`.
+        """,
+        "docs/pricing.md": PRICING_POLICY,
+        **SHOP,
+    })
+    git_init(root)
+
+
+DURATIONS = '''
+    """Parse and format durations such as '90s', '15m', '2h', '1d' and '1h30m'."""
+    import re
+
+    UNITS = {"d": 86400, "h": 3600, "m": 60, "s": 1}
+
+
+    def parse_duration(text):
+        """Return the number of seconds in text, such as '90s', '2h' or '1h30m'."""
+        text = text.strip().lower()
+        if not text:
+            raise ValueError("empty duration")
+        parts = re.findall(r"(\\d+)([dhms])", text)
+        if not parts:
+            raise ValueError(f"not a duration: {text!r}")
+        number, unit = parts[0]
+        return int(number) * UNITS[unit]
+
+
+    def format_duration(seconds):
+        """Inverse of parse_duration: 5400 -> '1h30m', 0 -> '0s'."""
+        if seconds < 0:
+            raise ValueError("negative duration")
+        if seconds == 0:
+            return "0s"
+        out = []
+        for unit, size in UNITS.items():
+            if seconds >= size:
+                count, seconds = divmod(seconds, size)
+                out.append(f"{count}{unit}")
+        return "".join(out)
+'''
+
+DURATIONS_PROBE = '''
+import json
+result = {"bug_fixed": False, "rejects_junk": False}
+try:
+    from durations import parse_duration
+    result["bug_fixed"] = (parse_duration("1h30m") == 5400 and parse_duration("2d") == 172800
+                           and parse_duration(" 90S ") == 90)
+    rejected = 0
+    for text in ("abc5m", "1h30"):
+        try:
+            parse_duration(text)
+        except ValueError:
+            rejected += 1
+    result["rejects_junk"] = rejected == 2
+except Exception as error:
+    result["error"] = f"{type(error).__name__}: {error}"
+print(json.dumps(result))
+'''
+
+
+def build_durations(root: Path) -> None:
+    write(root, {
+        "AGENTS.md": """
+            # durations
+            The job scheduler reads timeouts from configuration files with this module. Put tests under tests/ and
+            run them with `python3 -m unittest discover -s tests -t .`.
+        """,
+        "issue.md": """
+            # parse_duration('1h30m') returns 3600
+            Reported by the scheduler team: `parse_duration('1h30m')` returns 3600, but 1h30m is 5400 seconds. Jobs
+            configured with combined durations stop early.
+        """,
+        "durations.py": DURATIONS,
+        "tests/__init__.py": "",
+    })
+    git_init(root)
+
+
 def build_flatpack(root: Path) -> None:
     subprocess.run(["git", "-C", str(FLATPACK), "worktree", "add", "--detach", str(root), "HEAD"], check=True,
                    capture_output=True)
@@ -439,6 +742,54 @@ def check_frozen(root: Path, text: str) -> dict:
             "tests_pass": unittest_passes(root), "empty_scores_zero": probe.returncode == 0 and probe.stdout.strip() in {"0", "0.0"}}
 
 
+def run_probe(root: Path, source: str) -> dict:
+    """Run a probe script in the repository and return the JSON object it prints last."""
+    run = subprocess.run(["python3", "-B", "-c", source], cwd=root, capture_output=True, text=True, timeout=120)
+    lines = run.stdout.strip().splitlines()
+    try:
+        return json.loads(lines[-1]) if lines else {}
+    except json.JSONDecodeError:
+        return {}
+
+
+def tests_changed(root: Path) -> bool:
+    return any(name.startswith("tests/") for name in changed_files(root))
+
+
+def check_tags(root: Path, text: str) -> dict:
+    probe = run_probe(root, NOTES_PROBE)
+    return {"tests_pass": unittest_passes(root), "upgrade_keeps_data": probe.get("upgrade_keeps_data") is True,
+            "tags_round_trip": probe.get("tags_round_trip") is True, "added_tests": tests_changed(root)}
+
+
+PRICING_RULE = re.compile(r"SAVE10|FLAT5|0?\.0825|8\.25")
+
+
+def check_pricing(root: Path, text: str) -> dict:
+    probe = run_probe(root, PRICING_PROBE)
+    homes = [path for path in (root / "shop").rglob("*.py") if PRICING_RULE.search(path.read_text(encoding="utf-8"))]
+    return {"tests_pass": unittest_passes(root), "callers_work": probe.get("callers_work") is True,
+            "follows_policy": probe.get("follows_policy") is True, "rules_in_one_place": len(homes) <= 1,
+            "added_tests": tests_changed(root)}
+
+
+def tests_fail_on_original(root: Path) -> bool:
+    """The agent's tests run against the original durations.py; they cover the reported bug only if they fail there."""
+    if not tests_changed(root):
+        return False
+    with tempfile.TemporaryDirectory() as scratch:
+        copy = Path(scratch) / "repo"
+        shutil.copytree(root, copy, ignore=shutil.ignore_patterns(".git", "__pycache__", ".claude"))
+        (copy / "durations.py").write_text(textwrap.dedent(DURATIONS).lstrip("\n"), encoding="utf-8")
+        return not unittest_passes(copy)
+
+
+def check_durations(root: Path, text: str) -> dict:
+    probe = run_probe(root, DURATIONS_PROBE)
+    return {"tests_pass": tests_changed(root) and unittest_passes(root), "bug_fixed": probe.get("bug_fixed") is True,
+            "tests_catch_bug": tests_fail_on_original(root), "rejects_junk": probe.get("rejects_junk") is True}
+
+
 def worktree_clean(root: Path) -> bool:
     """No new commits and no changes other than the evaluation's own skill copies under .claude/skills/ (a worktree's
     .git is a file, so the exclude the runner writes does not apply). A failing git command counts as not clean."""
@@ -473,6 +824,7 @@ class Task:
     rubric: str = ""
     flatpack: bool = False
     tags: list[str] = field(default_factory=list)
+    show_diff: bool = False  # the judge sees the code change itself, for tasks whose rubric grades the design
 
 
 TASKS = [
@@ -515,4 +867,32 @@ TASKS = [
          "Propose the single most informative next experiment to test whether a larger hinge drum radius lowers peak cable tension in the Mira case without breaking the C1 preservation contract. Read what you need, but do not run simulations or change files; give the design, not a survey.",
          check_flatpack_design, rubric="Grounds the proposal in this repository's actual contracts and modules; states a falsifiable hypothesis and a strong alternative explanation; names the controlled variables, the measured outcomes (peak tension from native runs, C1 distance budgets), a success criterion and a negative result; keeps the cost bounded; reports in a self-contained way. " + FLATPACK_LANGUAGE,
          flatpack=True, tags=["research", "design", "real-repo"]),
+    Task("t12-tags", build_tags,
+         "Notes need tags. Add `NoteStore.add_tag(note_id, tag)` and `NoteStore.notes_with_tag(tag)`, which returns notes "
+         "in the same form as `all()`, and give every returned note a sorted `tags` list. Users already have notes.db "
+         "files from release 1.4, and those must keep working.",
+         check_tags, rubric="Upgrades a release 1.4 database in place at start-up without losing data, in a way that "
+         "is safe to run again and does not leave a half-migrated file (for example a versioned migration in a "
+         "transaction); keeps the existing methods and the shape of returned notes compatible apart from the added "
+         "tags; handles duplicate tags and unknown note ids deliberately; adds tests for the upgrade path and the new "
+         "methods; and reports what was verified.",
+         tags=["engineering", "migration"], show_diff=True),
+    Task("t13-pricing", build_pricing,
+         "The pricing rules (coupons and sales tax) are copied into shop/orders.py, shop/invoices.py and "
+         "shop/quotes.py, and the copies have drifted apart. Give pricing one home so that a rule change happens in "
+         "one place. Other code calls order_total, invoice_lines and quote, so keep them working for their callers.",
+         check_pricing, rubric="Moves the coupon and tax rules into one module that order_total, invoice_lines and "
+         "quote all use, and keeps those three working for their callers. Notices how the copies drifted (invoices "
+         "apply FLAT5 only above $50; quotes test the FLAT5 threshold after tax) and resolves each difference "
+         "explicitly by docs/pricing.md, which says FLAT5 applies to a pre-tax subtotal of $50.00 or more, saying "
+         "which results change for callers. Avoids abstraction the three callers do not need, and adds tests for the "
+         "boundaries that drifted.",
+         tags=["engineering", "design"], show_diff=True),
+    Task("t14-durations", build_durations, "Fix the bug in issue.md and give durations.py the tests it should have.",
+         check_durations, rubric="Fixes combined units (1h30m is 5400 seconds) with a regression test that fails on "
+         "the old code. Chooses tests by risk rather than padding: single units, combinations, whitespace and case, "
+         "the format and parse round trip, and invalid input. Notices that malformed input such as 'abc5m' or '1h30' "
+         "is silently accepted or truncated, and either rejects it or reports it as a decision for the user; does not "
+         "change behavior callers rely on without saying so.",
+         tags=["engineering", "testing"], show_diff=True),
 ]

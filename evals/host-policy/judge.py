@@ -37,7 +37,7 @@ Automatic checks on the agent's final repository state (true is good unless the 
 
 Summary of the files the agent changed:
 <changes>{changes}</changes>
-
+{diff}
 The agent's final message:
 <answer>{answer}</answer>
 
@@ -55,6 +55,26 @@ def changes(repo: Path) -> str:
     diff = subprocess.run(["git", "diff", "--stat"], cwd=repo, capture_output=True, text=True).stdout
     lines = [line for line in status.splitlines() if "__pycache__" not in line and ".claude/skills" not in line]
     return ("\n".join(lines[:40]) + "\n" + diff[-1500:]).strip() or "(no changes)"
+
+
+def code_change(repo: Path, limit: int = 20000) -> str:
+    """The change itself against the fixture commit: the diff of tracked files and the text of new files, without the
+    evaluation's skill copies, caches and binary files, cut at limit characters."""
+    root = subprocess.run(["git", "rev-list", "--max-parents=0", "HEAD"], cwd=repo, capture_output=True, text=True).stdout.split()
+    if not root:
+        return "(no repository)"
+    parts = [subprocess.run(["git", "diff", root[0], "--", ".", ":(exclude).claude"], cwd=repo, capture_output=True,
+                            text=True).stdout]
+    new = subprocess.run(["git", "ls-files", "--others", "--exclude-standard"], cwd=repo, capture_output=True, text=True).stdout
+    for name in new.splitlines():
+        if name.startswith(".claude/") or "__pycache__" in name or name.endswith((".pyc", ".db", ".sqlite")):
+            continue
+        try:
+            parts.append(f"--- new file: {name}\n{(repo / name).read_text(encoding='utf-8')}")
+        except (OSError, UnicodeDecodeError):
+            continue
+    text = "\n".join(part for part in parts if part).strip() or "(no changes)"
+    return text if len(text) <= limit else text[:limit] + f"\n[cut: {len(text) - limit} more characters]"
 
 
 def judge_with_claude(prompt: str) -> str:
@@ -87,8 +107,12 @@ def judge(run_dir: Path, record: dict) -> dict:
     answer = (workspace / "final.md").read_text() if (workspace / "final.md").exists() else ""
     # Answers that cite absolute paths would name the workspace, and with it the arm; the judge must stay blind.
     answer = ARM_PATH.sub("<workspace>", answer)
+    diff = ""
+    if task.show_diff:
+        diff = ("\nThe code change against the starting repository:\n<diff>"
+                + ARM_PATH.sub("<workspace>", code_change(workspace / "repo")) + "</diff>\n")
     prompt = PROMPT.format(prompt=task.prompt, checks=json.dumps(record.get("checks", {})),
-                           changes=changes(workspace / "repo"), answer=answer[:12000],
+                           changes=changes(workspace / "repo"), diff=diff, answer=answer[:12000],
                            rubric=task.rubric or "The task was carried out correctly and completely, within the scope the request implies.",
                            report=REPORT_RUBRIC)
     try:

@@ -15,6 +15,7 @@ import datetime as dt
 import importlib.util
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -40,10 +41,40 @@ def arm_material(arm: str, host: str, baseline: Path) -> tuple[str, dict[str, Pa
         skills = {name: ROOT / "skills" / name for name in cli.skills()}
     else:
         text = (baseline / f"{host}_global.md").read_text(encoding="utf-8")
-        skills = {"coresearch": baseline / "skills/coresearch"}
+        skills = {path.name: path for path in sorted((baseline / "skills").iterdir())
+                  if path.name != "frontend-skill" and (path / "SKILL.md").is_file()}
     if host == "codex":
         skills["frontend-skill"] = baseline / "skills/frontend-skill"
     return text, skills
+
+
+SKILL_FILE = re.compile(r"skills/([a-z0-9-]+)/((?:references/)?[\w.-]+\.md)")
+
+
+def skill_files(transcript: str, host: str) -> list[str]:
+    """Skill files the agent opened, such as 'engineering/references/design.md', from its tool calls only (not from
+    tool output, which can merely list a directory)."""
+    found: set[str] = set()
+    for line in transcript.splitlines():
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        calls = []
+        if host == "claude" and event.get("type") == "assistant":
+            for item in event.get("message", {}).get("content", []):
+                if isinstance(item, dict) and item.get("type") == "tool_use":
+                    arguments = item.get("input", {})
+                    if item.get("name") == "Skill" and isinstance(arguments, dict):
+                        found.add(f"{arguments.get('skill') or arguments.get('command')}/SKILL.md")
+                    calls.append(json.dumps(arguments))
+        elif host == "codex" and event.get("type") in ("item.started", "item.completed"):
+            item = event.get("item", {})
+            if item.get("type") == "command_execution":
+                calls.append(str(item.get("command", "")))
+        for text in calls:
+            found.update(f"{match.group(1)}/{match.group(2)}" for match in SKILL_FILE.finditer(text))
+    return sorted(found)
 
 
 def copy_skills(skills: dict[str, Path], destination: Path) -> None:
@@ -72,13 +103,21 @@ def run_one(task, host: str, arm: str, out: Path, baseline: Path, models: dict, 
                     stream.write("\n.claude/skills/\n")
             command = ["claude", "-p", "--model", models["claude"], "--effort", models["claude_effort"],
                        "--setting-sources", "project,local", "--settings", CLAUDE_SETTINGS,
-                       "--permission-mode", "bypassPermissions", "--output-format", "json",
+                       "--permission-mode", "bypassPermissions", "--output-format", "stream-json", "--verbose",
                        "--no-session-persistence", task.prompt]
             result = subprocess.run(command, cwd=repo, stdin=subprocess.DEVNULL, capture_output=True, text=True,
                                     timeout=timeout)
-            (workspace / "stdout.json").write_text(result.stdout)
+            (workspace / "transcript.jsonl").write_text(result.stdout)
             (workspace / "stderr.txt").write_text(result.stderr)
-            data = json.loads(result.stdout) if result.stdout.strip().startswith("{") else {}
+            data = {}
+            for line in result.stdout.splitlines():  # the last event, of type result, carries the answer and usage
+                try:
+                    event = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(event, dict) and event.get("type") == "result":
+                    data = event
+            record["skill_files"] = skill_files(result.stdout, "claude")
             final = data.get("result", "")
             usage = data.get("usage", {})
             if "hit your" in final and "limit" in final:
@@ -107,6 +146,7 @@ def run_one(task, host: str, arm: str, out: Path, baseline: Path, models: dict, 
                 (home / "auth.json").unlink(missing_ok=True)
             (workspace / "events.jsonl").write_text(result.stdout)
             (workspace / "stderr.txt").write_text(result.stderr[-20000:])
+            record["skill_files"] = skill_files(result.stdout, "codex")
             final = (workspace / "final.txt").read_text() if (workspace / "final.txt").exists() else ""
             usage = {"input_tokens": 0, "output_tokens": 0, "turns": 0}
             for line in result.stdout.splitlines():
@@ -145,6 +185,9 @@ def recheck(run_dir: Path) -> int:
         task = next(t for t in task_module.TASKS if t.id == record["task"])
         workspace = run_dir / f"{record['task']}__{record['host']}__{record['arm']}"
         final = (workspace / "final.md").read_text() if (workspace / "final.md").exists() else ""
+        for name in ("transcript.jsonl", "events.jsonl"):
+            if (workspace / name).exists():
+                record["skill_files"] = skill_files((workspace / name).read_text(), record["host"])
         if (workspace / "repo").exists():
             record["checks"] = task.check(workspace / "repo", final)
         elif task.flatpack and task.id == "t10-flatpack-question":

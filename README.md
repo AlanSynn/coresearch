@@ -40,7 +40,8 @@ generated text.
 Skills kept in another repository, such as the private `pace` skill for the PACE-Phoenix cluster, which lives with
 its tool, are listed in `~/.config/coresearch/skills.json` (a JSON object of skill name and directory, `~/` meaning
 the home directory) and linked into every host like the bundled skills. The file stays on this machine, so a private
-skill never enters this repository.
+skill never enters this repository. A skill's header must be strict YAML, which pi requires: a value holding `: `
+must be quoted, or pi drops the skill without a word; `host install` and `host check` refuse a header that is not.
 
 ## Start
 

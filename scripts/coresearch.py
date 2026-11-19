@@ -123,6 +123,29 @@ def skills() -> list[str]:
     return sorted(path.parent.name for path in (ROOT / "skills").glob("*/SKILL.md"))
 
 
+def frontmatter_problem(text: str) -> str | None:
+    """Why a SKILL.md header would not load in a strict YAML reader, or None when it would.
+
+    Claude Code and Codex read loose headers, but pi parses strict YAML and silently drops a skill whose unquoted value
+    holds ': ' or ' #' or starts with a YAML indicator; such a value must be quoted."""
+    parts = text.split("---", 2)
+    if not text.startswith("---") or len(parts) < 3:
+        return "no front matter"
+    for line in parts[1].strip("\n").splitlines():
+        if not line.strip() or line[:1].isspace():
+            continue  # a blank line or the indented text of a block value
+        key, separator, value = line.partition(":")
+        value = value.strip()
+        if not separator or not re.fullmatch(r"[\w-]+", key):
+            return f"not a key and value: {line!r}"
+        if value[:1] in ("'", '"') or re.fullmatch(r"[|>][+-]?[1-9]?[+-]?", value):
+            continue  # quoted, or a block whose text follows on indented lines
+        if ": " in value or value.endswith(":") or " #" in value or value[:1] in tuple("[]{}>|*&!%@`,") \
+                or value[:2] in ("- ", "? "):
+            return f"quote the {key} value: strict YAML readers such as pi drop this skill"
+    return None
+
+
 def external_skills(home: Path) -> dict[str, Path]:
     """Skills listed in the home's EXTERNAL_SKILLS file, as name and directory; empty when there is no such file.
 
@@ -143,6 +166,8 @@ def external_skills(home: Path) -> dict[str, Path]:
         if source.exists() and not (manifest.is_file()
                                     and re.search(rf"^name:\s*{name}\s*$", manifest.read_text(encoding="utf-8"), re.M)):
             raise ValueError(f"{path}: {source} has no SKILL.md named {name}")
+        if source.exists() and (problem := frontmatter_problem(manifest.read_text(encoding="utf-8"))):
+            raise ValueError(f"{manifest}: {problem}")
         found[name] = source
     return found
 

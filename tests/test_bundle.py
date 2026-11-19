@@ -24,7 +24,9 @@ class BundleTests(unittest.TestCase):
                 metadata = path.read_text().split("---", 2)[1]
                 self.assertEqual(set(re.findall(r"^(\w+):", metadata, re.M)), {"name", "description"})
                 self.assertIn(f"name: {path.parent.name}", metadata)
-                self.assertLess(len(metadata.split("description:")[1].strip()), 160)
+                self.assertIsNone(installer.frontmatter_problem(path.read_text()))
+                description = re.search(r"^description:\s*(.*)$", metadata, re.M).group(1).strip()
+                self.assertLess(len(description.strip('"')), 160)
         plugin = json.loads((ROOT / ".codex-plugin/plugin.json").read_text())
         self.assertEqual(plugin["name"], "coresearch")
         self.assertTrue((ROOT / plugin["skills"]).is_dir())

@@ -1,6 +1,6 @@
 ---
 name: coresearch
-description: Use when a research claim or paper rests on the work: experiment design, literature, analysis, claim review, manuscripts, long studies. Not routine coding.
+description: "Use when a research claim or paper rests on the work: experiment design, literature, analysis, claim review, manuscripts, long studies. Not routine coding."
 ---
 
 # Coresearch

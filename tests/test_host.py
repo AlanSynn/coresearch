@@ -75,6 +75,14 @@ class HostTests(unittest.TestCase):
         self._external({"tool": str(wrong)})
         with self.assertRaisesRegex(ValueError, "no SKILL.md named tool"):
             installer.host_check(self.home, ["claude"])
+        # pi reads strict YAML: an unquoted ': ' in a value would drop the skill there without a word.
+        (wrong / "SKILL.md").write_text("---\nname: tool\ndescription: Use when work needs GPUs: setup.\n---\n")
+        with self.assertRaisesRegex(ValueError, "quote the description value"):
+            installer.host_check(self.home, ["claude"])
+        (wrong / "SKILL.md").write_text('---\nname: tool\ndescription: "Use when work needs GPUs: setup."\n---\n')
+        installer.host_check(self.home, ["claude"])  # quoted, it passes
+        (wrong / "SKILL.md").write_text("---\nname: tool\ndescription: >-\n  Use when work needs GPUs: setup.\n---\n")
+        installer.host_check(self.home, ["claude"])  # so does a folded block
         self._external({"tool": "~/not-there"})
         self.assertIn(f"skipped, source missing: {self.home / 'not-there'}", installer.host_install(self.home, ["claude"]))
 
